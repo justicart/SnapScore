@@ -1,0 +1,7 @@
+{
+  "name": "SnapScore Cards",
+  "description": "A smart card game scorekeeper. Snap a photo of your hand, customize card values, and track scores for multiple players automatically using Gemini AI.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
