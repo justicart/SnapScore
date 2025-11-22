@@ -46,6 +46,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [isMirrored, setIsMirrored] = useState(false);
 
   useEffect(() => {
     let animationFrameId: number;
@@ -58,6 +59,12 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
       navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
         .then(mediaStream => {
           stream = mediaStream;
+          
+          // Determine if mirroring is needed (e.g. laptop webcam)
+          const track = stream.getVideoTracks()[0];
+          const settings = track.getSettings();
+          setIsMirrored(settings.facingMode !== 'environment');
+
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
             videoRef.current.play().catch(e => console.warn("Play error", e));
@@ -79,6 +86,8 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
         const ctx = canvas.getContext('2d');
         
         if (ctx) {
+          // Note: We draw the raw video (unmirrored) to canvas for reading the QR code.
+          // This is correct because QR codes contain text/data that shouldn't be flipped.
           ctx.drawImage(video, 0, 0);
           const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
           const code = jsQR(imageData.data, imageData.width, imageData.height);
@@ -183,7 +192,12 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
               ) : (
                  <>
                     <div className="relative w-full max-w-xs aspect-square bg-black rounded-xl overflow-hidden border-2 border-emerald-500/50 shadow-2xl">
-                       <video ref={videoRef} className="absolute inset-0 w-full h-full object-cover opacity-80" playsInline muted />
+                       <video 
+                         ref={videoRef} 
+                         className={`absolute inset-0 w-full h-full object-cover opacity-80 transition-transform ${isMirrored ? 'scale-x-[-1]' : ''}`} 
+                         playsInline 
+                         muted 
+                       />
                        <canvas ref={canvasRef} className="hidden" />
                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                           <div className="w-48 h-48 border-2 border-emerald-400 rounded-lg relative">

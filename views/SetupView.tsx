@@ -1,9 +1,9 @@
+
 import React, { useState } from 'react';
 import { Player } from '../types';
 import { Button } from '../components/Button';
 import { IconTrash, IconSettings, IconPlus, IconQrCode } from '../components/Icons';
-
-const generateId = () => Math.random().toString(36).substr(2, 9);
+import { v4 as uuidv4 } from 'uuid';
 
 interface SetupViewProps {
   onStart: (players: Player[]) => void;
@@ -37,10 +37,9 @@ export const SetupView: React.FC<SetupViewProps> = ({ onStart, onOpenSettings, o
       .map(name => name.trim())
       .filter(name => name.length > 0)
       .map(name => ({
-        id: generateId(),
+        id: uuidv4(),
         name,
-        score: 0,
-        history: []
+        rounds: []
       }));
 
     if (validPlayers.length > 0) {

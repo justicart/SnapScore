@@ -1,8 +1,7 @@
+
 import Peer, { DataConnection } from 'peerjs';
 import { P2PMessage } from '../types';
 
-// Helper to create a peer ID that is somewhat readable but unique
-// e.g. "snapscore-abc12"
 export const generateShortId = () => {
   return Math.random().toString(36).substring(2, 7).toUpperCase();
 };
@@ -14,26 +13,34 @@ export class P2PService {
   private hostId: string | null = null;
 
   constructor() {
-    // Initialize empty
   }
 
   init(id?: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      if (this.peer) {
+      if (this.peer && !this.peer.destroyed) {
         resolve(this.peer.id);
         return;
       }
 
-      // If no ID provided, generate one.
-      // Note: In a real prod app, we might want a STUN/TURN server config here for better connectivity
       this.peer = new Peer(id || generateShortId(), {
-        debug: 1
+        debug: 1,
+        config: {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+        }
       });
 
       this.peer.on('open', (id) => {
         console.log('My Peer ID is: ' + id);
         this.hostId = id;
         resolve(id);
+      });
+
+      this.peer.on('disconnected', () => {
+        console.log('Peer disconnected from server, attempting reconnect...');
+        this.peer?.reconnect();
       });
 
       this.peer.on('connection', (conn) => {
@@ -43,15 +50,18 @@ export class P2PService {
 
       this.peer.on('error', (err) => {
         console.error('PeerJS error:', err);
-        reject(err);
+        // Only reject if we are in the initialization phase
+        if (!this.hostId) {
+            reject(err);
+        }
       });
     });
   }
 
   connect(hostId: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      if (!this.peer) {
-        this.init().then(() => this._connectToHost(hostId, resolve, reject));
+      if (!this.peer || this.peer.destroyed) {
+        this.init().then(() => this._connectToHost(hostId, resolve, reject)).catch(reject);
       } else {
         this._connectToHost(hostId, resolve, reject);
       }
@@ -103,8 +113,6 @@ export class P2PService {
   }
 
   sendToHost(msg: P2PMessage) {
-    // As a client, we typically only have one connection (to the host)
-    // But we can iterate to be safe
     this.connections.forEach(conn => {
         if(conn.open) conn.send(msg);
     });
@@ -119,6 +127,7 @@ export class P2PService {
     this.peer?.destroy();
     this.peer = null;
     this.connections = [];
+    this.hostId = null;
   }
 }
 

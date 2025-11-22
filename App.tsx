@@ -1,11 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Player, AppView, CardSettings, ScanResult, GameState, P2PMessage } from './types';
+
+import React, { useState, useEffect } from 'react';
+import { Player, AppView, CardSettings, Round, GameState, P2PMessage } from './types';
 import { SetupView } from './views/SetupView';
 import { GameView } from './views/GameView';
 import { SettingsView } from './views/SettingsView';
 import { ScanView } from './views/ScanView';
 import { MultiplayerModal } from './components/MultiplayerModal';
 import { p2p } from './services/p2pService';
+import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_SETTINGS: CardSettings = {
   jokerValue: 50,
@@ -23,16 +25,17 @@ const App: React.FC = () => {
   
   // Scanning State
   const [scanPlayerId, setScanPlayerId] = useState<string | null>(null);
+  const [scanRoundId, setScanRoundId] = useState<string | null>(null);
 
   // Multiplayer State
   const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
   const [peerId, setPeerId] = useState<string>('');
   const [connectedPeers, setConnectedPeers] = useState<number>(0);
-  const [isClient, setIsClient] = useState(false); // If true, we are NOT the host
+  const [isClient, setIsClient] = useState(false);
+  const [isJoining, setIsJoining] = useState(false);
 
   // --- P2P Setup ---
   useEffect(() => {
-    // Initialize P2P immediately as host/local
     const initP2p = async () => {
       try {
         const id = await p2p.init();
@@ -42,21 +45,14 @@ const App: React.FC = () => {
           handleP2PMessage(msg);
         });
 
-        // Only tracking connection count indirectly for now by checking connection array length
-        // In a real app, p2pService would emit connection events. 
-        // Hack: Poll for connection count or add event emitter to service.
-        // For simplicity, we just update it when we get a message or broadcast.
         setInterval(() => {
-             // @ts-ignore - accessing private for quick count, ideally service exposes getter
+             // @ts-ignore
              if (p2p.connections) setConnectedPeers(p2p.connections.length);
         }, 2000);
 
-        // Check for join link in URL
         const params = new URLSearchParams(window.location.search);
         const joinId = params.get('join');
         if (joinId) {
-            console.log("Found join ID in URL:", joinId);
-            // Clean URL immediately to avoid re-joining on refresh if logic changes
             window.history.replaceState({}, document.title, window.location.pathname);
             handleJoinGame(joinId);
         }
@@ -73,14 +69,11 @@ const App: React.FC = () => {
   }, []);
 
   // --- Sync Logic ---
-
-  // If we are HOST, anytime players or settings change, broadcast to clients
   useEffect(() => {
     if (!isClient && connectedPeers > 0) {
-        // Small debounce could be good here
         broadcastState();
     }
-  }, [players, settings, view, connectedPeers]); // removed isClient to avoid loop
+  }, [players, settings, view, connectedPeers]);
 
   const broadcastState = () => {
      p2p.broadcast({
@@ -88,24 +81,21 @@ const App: React.FC = () => {
          payload: {
              players,
              settings,
-             view: view === AppView.SCAN ? AppView.GAME : view // Don't sync Scan view to others, keep them on Game
+             view: view === AppView.SCAN ? AppView.GAME : view
          }
      });
   };
 
   const handleP2PMessage = (msg: P2PMessage) => {
       if (msg.type === 'SYNC_STATE') {
-          // We are a client receiving state
           setIsClient(true);
           setPlayers(msg.payload.players);
           setSettings(msg.payload.settings);
-          // We generally follow the host's view, but maybe not into Settings/Scan screens blindly
           if (msg.payload.view === AppView.GAME || msg.payload.view === AppView.SETUP) {
               setView(msg.payload.view);
           }
-      } else if (msg.type === 'REQUEST_SCORE_UPDATE') {
-          // We are host receiving a score update request
-          handleUpdateScore(msg.payload.playerId, msg.payload.scoreToAdd);
+      } else if (msg.type === 'REQUEST_SAVE_ROUND') {
+          handleSaveRound(msg.payload.playerId, msg.payload.round);
       } else if (msg.type === 'REQUEST_RESET') {
           handleResetGame();
       } else if (msg.type === 'REQUEST_SETTINGS_UPDATE') {
@@ -114,31 +104,46 @@ const App: React.FC = () => {
   };
 
   const handleJoinGame = async (targetHostId: string) => {
+      setIsJoining(true);
       try {
-          // Visual feedback handled by UI state change if successful
           await p2p.connect(targetHostId);
           setIsClient(true);
           setIsMultiplayerOpen(false);
-          // We don't alert here, the UI will update to "JOINED" badge in GameView
       } catch (e) {
           console.error(e);
-          alert("Could not connect to host. The game may have ended or the ID is incorrect.");
+          alert("Could not connect to host.");
+      } finally {
+          setIsJoining(false);
       }
   };
 
-  // --- Local Storage (Only if Host) ---
+  // --- Local Storage & Migration (Only if Host) ---
   useEffect(() => {
     if (!isClient) {
         const savedPlayers = localStorage.getItem('snapscore_players');
         const savedSettings = localStorage.getItem('snapscore_settings');
+        
         if (savedPlayers) {
-            const p = JSON.parse(savedPlayers);
-            setPlayers(p);
-            if (p.length > 0) setView(AppView.GAME);
+            const parsed = JSON.parse(savedPlayers);
+            // Migration check: if players have 'history' (array of numbers), convert to 'rounds'
+            const migratedPlayers: Player[] = parsed.map((p: any) => {
+                if (p.rounds) return p;
+                // Convert old history of numbers to Manual rounds
+                const rounds: Round[] = (p.history || []).map((score: number) => ({
+                    type: 'manual',
+                    id: uuidv4(),
+                    score,
+                    timestamp: Date.now()
+                }));
+                return { id: p.id, name: p.name, rounds };
+            });
+            setPlayers(migratedPlayers);
+            if (migratedPlayers.length > 0) setView(AppView.GAME);
         }
+
         if (savedSettings) {
             const parsed = JSON.parse(savedSettings);
-             const migratedSettings: CardSettings = {
+            const migratedSettings: CardSettings = {
                 ...DEFAULT_SETTINGS,
                 ...parsed,
                 fixedFaceValue: parsed.fixedFaceValue ?? parsed.faceValue ?? DEFAULT_SETTINGS.fixedFaceValue,
@@ -147,7 +152,7 @@ const App: React.FC = () => {
             setSettings(migratedSettings);
         }
     }
-  }, []); // On mount only
+  }, []);
 
   useEffect(() => {
     if (!isClient) {
@@ -165,26 +170,36 @@ const App: React.FC = () => {
   // --- Actions ---
 
   const handleStartGame = (newPlayers: Player[]) => {
-    if (isClient) return; // Clients shouldn't start games directly usually
+    if (isClient) return;
     setPlayers(newPlayers);
     setView(AppView.GAME);
   };
 
-  const handleUpdateScore = (playerId: string, scoreToAdd: number) => {
+  const handleSaveRound = (playerId: string, round: Round) => {
     if (isClient) {
         p2p.sendToHost({
-            type: 'REQUEST_SCORE_UPDATE',
-            payload: { playerId, scoreToAdd }
+            type: 'REQUEST_SAVE_ROUND',
+            payload: { playerId, round }
         });
         return;
     }
 
     setPlayers(prev => prev.map(p => {
       if (p.id === playerId) {
+        // Check if this round ID already exists (update) or is new (append)
+        const existingRoundIndex = p.rounds.findIndex(r => r.id === round.id);
+        let newRounds;
+        
+        if (existingRoundIndex >= 0) {
+            newRounds = [...p.rounds];
+            newRounds[existingRoundIndex] = round;
+        } else {
+            newRounds = [...p.rounds, round];
+        }
+        
         return {
           ...p,
-          score: p.score + scoreToAdd,
-          history: [...p.history, scoreToAdd]
+          rounds: newRounds
         };
       }
       return p;
@@ -207,31 +222,41 @@ const App: React.FC = () => {
           return;
       }
       setSettings(newSettings);
-      // Logic for navigation
       setView(players.length > 0 ? AppView.GAME : AppView.SETUP);
   };
 
-  const handleRequestScan = (playerId: string) => {
+  const handleRequestScan = (playerId: string, roundId?: string) => {
     setScanPlayerId(playerId);
+    setScanRoundId(roundId || null);
     setView(AppView.SCAN);
   };
 
-  const handleScanComplete = (score: number) => {
+  const handleScanComplete = (round: Round) => {
     if (scanPlayerId) {
-      handleUpdateScore(scanPlayerId, score);
+      handleSaveRound(scanPlayerId, round);
       setScanPlayerId(null);
+      setScanRoundId(null);
       setView(AppView.GAME);
     }
   };
 
   const handleCancelScan = () => {
     setScanPlayerId(null);
+    setScanRoundId(null);
     setView(AppView.GAME);
+  }
+
+  if (isJoining) {
+      return (
+          <div className="min-h-screen bg-felt-900 flex flex-col items-center justify-center p-6">
+              <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
+              <h2 className="text-xl font-bold text-white animate-pulse">Joining Game...</h2>
+          </div>
+      );
   }
 
   return (
     <div className="max-w-md mx-auto min-h-screen bg-felt-900 flex flex-col shadow-2xl relative overflow-hidden">
-      {/* Multiplayer Modal Overlay */}
       {isMultiplayerOpen && (
           <MultiplayerModal 
             hostId={peerId} 
@@ -260,7 +285,8 @@ const App: React.FC = () => {
       {view === AppView.GAME && (
         <GameView 
           players={players}
-          onScoreUpdate={handleUpdateScore}
+          settings={settings}
+          onSaveRound={handleSaveRound}
           onRequestScan={handleRequestScan}
           onOpenSettings={() => setView(AppView.SETTINGS)}
           onReset={handleResetGame}
@@ -272,6 +298,7 @@ const App: React.FC = () => {
       {view === AppView.SCAN && scanPlayerId && (
         <ScanView 
           player={players.find(p => p.id === scanPlayerId)!}
+          existingRoundId={scanRoundId || undefined}
           settings={settings}
           onComplete={handleScanComplete}
           onCancel={handleCancelScan}
