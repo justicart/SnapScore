@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Player, AppView, CardSettings, Round, GameState, P2PMessage } from './types';
+import { Player, AppView, CardSettings, Round, P2PMessage } from './types';
 import { SetupView } from './views/SetupView';
 import { GameView } from './views/GameView';
 import { SettingsView } from './views/SettingsView';
@@ -33,6 +33,9 @@ const App: React.FC = () => {
   const [connectedPeers, setConnectedPeers] = useState<number>(0);
   const [isClient, setIsClient] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  
+  // Check if API Key is configured
+  const hasApiKey = !!process.env.API_KEY;
 
   // --- P2P Setup ---
   useEffect(() => {
@@ -292,6 +295,7 @@ const App: React.FC = () => {
           onReset={handleResetGame}
           onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
           isClient={isClient}
+          hasApiKey={hasApiKey}
         />
       )}
 

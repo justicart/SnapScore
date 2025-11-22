@@ -15,6 +15,7 @@ interface GameViewProps {
   onReset: () => void;
   onOpenMultiplayer: () => void;
   isClient: boolean;
+  hasApiKey: boolean;
 }
 
 export const GameView: React.FC<GameViewProps> = ({ 
@@ -25,7 +26,8 @@ export const GameView: React.FC<GameViewProps> = ({
   onOpenSettings,
   onReset,
   onOpenMultiplayer,
-  isClient
+  isClient,
+  hasApiKey
 }) => {
   const [manualEntryPlayerId, setManualEntryPlayerId] = useState<string | null>(null);
   const [manualEntryRoundId, setManualEntryRoundId] = useState<string | null>(null);
@@ -128,7 +130,13 @@ export const GameView: React.FC<GameViewProps> = ({
               <div className="grid grid-cols-2 gap-3 mt-2">
                   <button 
                       onClick={() => onRequestScan(player.id)}
-                      className="flex items-center justify-center gap-2 bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 py-2 rounded-lg border border-emerald-600/20 transition-colors font-medium text-sm"
+                      disabled={!hasApiKey}
+                      className={`flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm ${
+                        hasApiKey 
+                          ? 'bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border-emerald-600/20' 
+                          : 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed opacity-50'
+                      }`}
+                      title={!hasApiKey ? "API Key missing. Manual entry only." : undefined}
                   >
                       <IconCamera className="w-4 h-4" />
                       Scan Hand
@@ -258,6 +266,8 @@ export const GameView: React.FC<GameViewProps> = ({
                     <div className="grid grid-cols-2 gap-3">
                         <Button 
                             variant="soft"
+                            disabled={!hasApiKey}
+                            title={!hasApiKey ? "API Key missing" : undefined}
                             onClick={() => {
                                 if (activeRoundPlayerId && activeRound) {
                                     onRequestScan(activeRoundPlayerId, activeRound.id);
