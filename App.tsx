@@ -34,9 +34,6 @@ const App: React.FC = () => {
   const [isClient, setIsClient] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   
-  // Check if API Key is configured
-  const hasApiKey = !!process.env.API_KEY;
-
   // --- P2P Setup ---
   useEffect(() => {
     const initP2p = async () => {
@@ -304,7 +301,6 @@ const App: React.FC = () => {
           onReset={handleResetGame}
           onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
           isClient={isClient}
-          hasApiKey={hasApiKey}
         />
       )}
 

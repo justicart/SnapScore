@@ -39,10 +39,16 @@ const responseSchema: Schema = {
 
 export const analyzeHand = async (base64Image: string): Promise<ScanResult> => {
   try {
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+      console.error("CRITICAL ERROR: API Key is missing. process.env.API_KEY is undefined.");
+      throw new Error("API Key not found. Please check your configuration and rebuild.");
+    }
+
     // Normalize base64 string (remove data URL prefix if present)
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',
