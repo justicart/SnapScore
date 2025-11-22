@@ -258,7 +258,7 @@ const App: React.FC = () => {
 
   if (isJoining) {
       return (
-          <div className="min-h-screen bg-felt-900 flex flex-col items-center justify-center p-6">
+          <div className="h-[100dvh] bg-felt-900 flex flex-col items-center justify-center p-6">
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
               <h2 className="text-xl font-bold text-white animate-pulse">Joining Game...</h2>
           </div>
@@ -266,7 +266,7 @@ const App: React.FC = () => {
   }
 
   return (
-    <div className="max-w-md mx-auto min-h-screen bg-felt-900 flex flex-col shadow-2xl relative overflow-hidden">
+    <div className="max-w-md mx-auto h-[100dvh] bg-felt-900 flex flex-col shadow-2xl relative overflow-hidden">
       {isMultiplayerOpen && (
           <MultiplayerModal 
             hostId={peerId} 

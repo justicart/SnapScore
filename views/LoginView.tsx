@@ -10,7 +10,7 @@ interface LoginViewProps {
 
 export const LoginView: React.FC<LoginViewProps> = ({ onLogin, isLoggingIn }) => {
   return (
-    <div className="min-h-screen bg-felt-900 flex flex-col items-center justify-center p-6 text-center">
+    <div className="min-h-[100dvh] bg-felt-900 flex flex-col items-center justify-center p-6 text-center">
       <div className="bg-emerald-900/30 p-8 rounded-full mb-8 animate-pulse-slow shadow-2xl shadow-emerald-900/20">
         <IconQrCode className="w-20 h-20 text-emerald-400" />
       </div>

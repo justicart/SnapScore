@@ -52,6 +52,18 @@ export const SetupView: React.FC<SetupViewProps> = ({
         rounds: []
       }));
 
+    // Track locally created players
+    if (validPlayers.length > 0) {
+      try {
+        const stored = localStorage.getItem('snapscore_my_player_ids');
+        const existing = stored ? JSON.parse(stored) : [];
+        const newIds = validPlayers.map(p => p.id);
+        localStorage.setItem('snapscore_my_player_ids', JSON.stringify([...existing, ...newIds]));
+      } catch (err) {
+        console.error("Failed to save player ownership", err);
+      }
+    }
+
     if (isClient) {
         // Client: Send players to host if any are typed
         if (validPlayers.length > 0) {
@@ -74,9 +86,9 @@ export const SetupView: React.FC<SetupViewProps> = ({
   const canSubmit = isClient ? hasInput : (hasInput || players.length > 0);
 
   return (
-    <div className="flex-1 flex flex-col p-6">
+    <div className="flex-1 flex flex-col h-full">
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex justify-between items-center px-6 pt-6 pb-4 shrink-0">
         <div>
             <h1 className="text-3xl font-bold text-white tracking-tight">SnapScore</h1>
             {isClient && <span className="text-xs text-emerald-400 font-bold tracking-wider uppercase">Joined Lobby</span>}
@@ -99,7 +111,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto space-y-8">
+      <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-8">
         
         {/* Existing Roster (Host & Client see this) */}
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
@@ -128,7 +140,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
         </div>
 
         {/* Add Player Form */}
-        <div>
+        <div className="pb-2"> {/* Extra padding for focus rings */}
             <h2 className="text-xl text-emerald-400 font-semibold mb-4">
                 {isClient ? "Join Game" : "Add Players"}
             </h2>
@@ -141,13 +153,13 @@ export const SetupView: React.FC<SetupViewProps> = ({
 
             <form id="setup-form" onSubmit={handleSubmit} className="space-y-3">
             {names.map((name, index) => (
-                <div key={index} className="flex gap-2">
+                <div key={index} className="flex gap-2 group">
                 <input
                     type="text"
                     value={name}
                     onChange={(e) => handleNameChange(index, e.target.value)}
                     placeholder={isClient ? "Your Name" : `Player ${players.length + index + 1} Name`}
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow"
                     autoFocus={index === 0 && names.length === 1}
                 />
                 {names.length > 1 && (
@@ -167,7 +179,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
                 variant="secondary" 
                 fullWidth 
                 onClick={addPlayer}
-                className="mt-4 border-dashed border-2 border-slate-600 bg-transparent"
+                className="mt-4 border-dashed border-2 border-slate-600 bg-transparent hover:border-slate-500"
             >
                 <IconPlus className="w-5 h-5 mr-2" />
                 Add Another
@@ -176,7 +188,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
         </div>
       </div>
 
-      <div className="mt-4 pt-6 border-t border-slate-800">
+      <div className="p-6 border-t border-slate-800 bg-felt-900 shrink-0 z-10">
         {isClient && joined && (
             <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg flex items-center gap-2 text-emerald-400 text-sm">
                 <IconCheck className="w-5 h-5" />

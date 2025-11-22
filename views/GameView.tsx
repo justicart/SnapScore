@@ -40,6 +40,16 @@ export const GameView: React.FC<GameViewProps> = ({
   const [activeRoundPlayerId, setActiveRoundPlayerId] = useState<string | null>(null);
   const [activeRoundIndex, setActiveRoundIndex] = useState<number | null>(null);
 
+  // Load my players
+  const [myPlayerIds] = useState<Set<string>>(() => {
+    try {
+        const stored = localStorage.getItem('snapscore_my_player_ids');
+        return new Set(stored ? JSON.parse(stored) : []);
+    } catch {
+        return new Set();
+    }
+  });
+
   const manualInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -70,6 +80,71 @@ export const GameView: React.FC<GameViewProps> = ({
   };
 
   const manualEntryName = players.find(p => p.id === manualEntryPlayerId)?.name;
+
+  const myPlayers = players.filter(p => myPlayerIds.has(p.id));
+  const otherPlayers = players.filter(p => !myPlayerIds.has(p.id));
+  
+  const renderPlayerCard = (player: Player) => {
+    const totalScore = calculatePlayerTotal(player, settings);
+    return (
+      <div key={player.id} className="bg-slate-800 rounded-xl p-4 shadow-lg border border-slate-700/50 relative overflow-hidden group">
+        <div className="flex justify-between items-start mb-3">
+          <h3 className="text-lg font-bold text-white truncate max-w-[120px]">{player.name}</h3>
+          <div className="text-right">
+            <span className="text-3xl font-black text-emerald-400">{totalScore}</span>
+            <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Pts</div>
+          </div>
+        </div>
+        
+        {/* History Snippet */}
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-2 text-xs text-slate-400 scrollbar-hide">
+           {player.rounds.length === 0 && <span className="italic opacity-50">No rounds played</span>}
+           {player.rounds.map((round, i) => (
+               <button 
+                  key={round.id || i} 
+                  onClick={() => {
+                      setActiveRound(round);
+                      setActiveRoundPlayerName(player.name);
+                      setActiveRoundPlayerId(player.id);
+                      setActiveRoundIndex(i + 1);
+                  }}
+                  className="bg-slate-900/50 hover:bg-slate-900 hover:text-emerald-400 px-2 py-1 rounded border border-transparent hover:border-emerald-500/30 transition-colors cursor-pointer"
+               >
+                 {calculateRoundScore(round, settings)}
+               </button>
+           ))}
+        </div>
+
+        {/* Actions */}
+        <div className="grid grid-cols-2 gap-3 mt-2">
+            <button 
+                onClick={() => onRequestScan(player.id)}
+                disabled={!hasApiKey}
+                className={`flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm ${
+                  hasApiKey 
+                    ? 'bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border-emerald-600/20' 
+                    : 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed opacity-50'
+                }`}
+                title={!hasApiKey ? "API Key missing. Manual entry only." : undefined}
+            >
+                <IconCamera className="w-4 h-4" />
+                Scan Hand
+            </button>
+            <button 
+                 onClick={() => {
+                    setManualEntryPlayerId(player.id);
+                    setManualEntryRoundId(null);
+                    setManualScore('');
+                 }}
+                className="flex items-center justify-center gap-2 bg-slate-700 text-slate-300 hover:bg-slate-600 py-2 rounded-lg transition-colors font-medium text-sm"
+            >
+                <IconPlus className="w-4 h-4" />
+                Manual
+            </button>
+        </div>
+      </div>
+    );
+  };
   
   return (
     <div className="flex flex-col h-full relative">
@@ -95,67 +170,26 @@ export const GameView: React.FC<GameViewProps> = ({
 
       {/* Player List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
-        {players.map((player) => {
-          const totalScore = calculatePlayerTotal(player, settings);
-          return (
-            <div key={player.id} className="bg-slate-800 rounded-xl p-4 shadow-lg border border-slate-700/50 relative overflow-hidden group">
-              <div className="flex justify-between items-start mb-3">
-                <h3 className="text-lg font-bold text-white truncate max-w-[120px]">{player.name}</h3>
-                <div className="text-right">
-                  <span className="text-3xl font-black text-emerald-400">{totalScore}</span>
-                  <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Pts</div>
-                </div>
-              </div>
-              
-              {/* History Snippet */}
-              <div className="flex gap-2 overflow-x-auto pb-2 mb-2 text-xs text-slate-400 scrollbar-hide">
-                 {player.rounds.length === 0 && <span className="italic opacity-50">No rounds played</span>}
-                 {player.rounds.map((round, i) => (
-                     <button 
-                        key={round.id || i} 
-                        onClick={() => {
-                            setActiveRound(round);
-                            setActiveRoundPlayerName(player.name);
-                            setActiveRoundPlayerId(player.id);
-                            setActiveRoundIndex(i + 1);
-                        }}
-                        className="bg-slate-900/50 hover:bg-slate-900 hover:text-emerald-400 px-2 py-1 rounded border border-transparent hover:border-emerald-500/30 transition-colors cursor-pointer"
-                     >
-                       {calculateRoundScore(round, settings)}
-                     </button>
-                 ))}
-              </div>
+        {/* Render My Players First */}
+        {myPlayers.map(renderPlayerCard)}
 
-              {/* Actions */}
-              <div className="grid grid-cols-2 gap-3 mt-2">
-                  <button 
-                      onClick={() => onRequestScan(player.id)}
-                      disabled={!hasApiKey}
-                      className={`flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm ${
-                        hasApiKey 
-                          ? 'bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border-emerald-600/20' 
-                          : 'bg-slate-800 text-slate-600 border-slate-700 cursor-not-allowed opacity-50'
-                      }`}
-                      title={!hasApiKey ? "API Key missing. Manual entry only." : undefined}
-                  >
-                      <IconCamera className="w-4 h-4" />
-                      Scan Hand
-                  </button>
-                  <button 
-                       onClick={() => {
-                          setManualEntryPlayerId(player.id);
-                          setManualEntryRoundId(null);
-                          setManualScore('');
-                       }}
-                      className="flex items-center justify-center gap-2 bg-slate-700 text-slate-300 hover:bg-slate-600 py-2 rounded-lg transition-colors font-medium text-sm"
-                  >
-                      <IconPlus className="w-4 h-4" />
-                      Manual
-                  </button>
-              </div>
+        {/* Divider if both sections exist */}
+        {myPlayers.length > 0 && otherPlayers.length > 0 && (
+            <div className="flex items-center gap-3 py-2 opacity-50">
+                 <div className="h-px bg-slate-600 flex-1"></div>
+                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Remote Players</span>
+                 <div className="h-px bg-slate-600 flex-1"></div>
             </div>
-          );
-        })}
+        )}
+
+        {/* Render Other Players */}
+        {otherPlayers.map(renderPlayerCard)}
+        
+        {players.length === 0 && (
+            <div className="text-center py-10 opacity-50">
+                <p>No players added.</p>
+            </div>
+        )}
       </div>
 
       {/* Reset Confirmation Modal */}
@@ -210,7 +244,7 @@ export const GameView: React.FC<GameViewProps> = ({
                             Cancel
                         </Button>
                         <Button type="submit" className="py-4">
-                            {isClient ? 'Send Request' : 'Save'}
+                            Save
                         </Button>
                     </div>
                 </form>
