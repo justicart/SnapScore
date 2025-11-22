@@ -103,6 +103,8 @@ const App: React.FC = () => {
           handleResetGame();
       } else if (msg.type === 'REQUEST_SETTINGS_UPDATE') {
           setSettings(msg.payload);
+      } else if (msg.type === 'REQUEST_ADD_PLAYERS') {
+          setPlayers(prev => [...prev, ...msg.payload]);
       }
   };
 
@@ -173,8 +175,13 @@ const App: React.FC = () => {
   // --- Actions ---
 
   const handleStartGame = (newPlayers: Player[]) => {
-    if (isClient) return;
-    setPlayers(newPlayers);
+    if (isClient) {
+        p2p.sendToHost({ type: 'REQUEST_ADD_PLAYERS', payload: newPlayers });
+        return;
+    }
+    
+    // Host merges new players with existing ones
+    setPlayers(prev => [...prev, ...newPlayers]);
     setView(AppView.GAME);
   };
 
@@ -274,6 +281,8 @@ const App: React.FC = () => {
           onStart={handleStartGame} 
           onOpenSettings={() => setView(AppView.SETTINGS)}
           onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
+          isClient={isClient}
+          players={players}
         />
       )}
 

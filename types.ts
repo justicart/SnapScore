@@ -47,4 +47,5 @@ export type P2PMessage =
   | { type: 'SYNC_STATE'; payload: GameState }
   | { type: 'REQUEST_SAVE_ROUND'; payload: { playerId: string; round: Round } }
   | { type: 'REQUEST_RESET'; payload: null }
-  | { type: 'REQUEST_SETTINGS_UPDATE'; payload: CardSettings };
+  | { type: 'REQUEST_SETTINGS_UPDATE'; payload: CardSettings }
+  | { type: 'REQUEST_ADD_PLAYERS'; payload: Player[] };
