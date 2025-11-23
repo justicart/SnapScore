@@ -39,8 +39,11 @@ export class P2PService {
       });
 
       this.peer.on('disconnected', () => {
-        console.log('Peer disconnected from server, attempting reconnect...');
-        this.peer?.reconnect();
+        // If we are null, we likely destroyed it intentionally, so don't spam logs
+        if (this.peer) {
+            console.log('Peer disconnected from server, attempting reconnect...');
+            this.peer.reconnect();
+        }
       });
 
       this.peer.on('connection', (conn) => {
@@ -49,6 +52,10 @@ export class P2PService {
       });
 
       this.peer.on('error', (err) => {
+        // Ignore "lost connection" errors if we are in the process of destroying or haven't fully inited
+        if (err.type === 'network' || err.type === 'server-error' || String(err).includes("Lost connection")) {
+             if (!this.hostId || !this.peer) return;
+        }
         console.error('PeerJS error:', err);
         // Only reject if we are in the initialization phase
         if (!this.hostId) {
@@ -124,7 +131,11 @@ export class P2PService {
 
   destroy() {
     this.connections.forEach(c => c.close());
-    this.peer?.destroy();
+    if (this.peer) {
+        // Remove listeners to prevent errors firing during destruction
+        this.peer.removeAllListeners();
+        this.peer.destroy();
+    }
     this.peer = null;
     this.connections = [];
     this.hostId = null;

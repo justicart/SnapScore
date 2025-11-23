@@ -36,6 +36,8 @@ const App: React.FC = () => {
   
   // --- P2P Setup ---
   useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
     const initP2p = async () => {
       try {
         const id = await p2p.init();
@@ -45,9 +47,11 @@ const App: React.FC = () => {
           handleP2PMessage(msg);
         });
 
-        setInterval(() => {
+        // Clean interval usage
+        intervalId = setInterval(() => {
              // @ts-ignore
-             if (p2p.connections) setConnectedPeers(p2p.connections.length);
+             const count = p2p.connections?.length || 0;
+             setConnectedPeers(count);
         }, 2000);
 
         const params = new URLSearchParams(window.location.search);
@@ -58,12 +62,15 @@ const App: React.FC = () => {
         }
 
       } catch (err) {
+        // Suppress expected PeerJS disconnection errors during hot reloads
+        if (String(err).includes("Lost connection")) return;
         console.error("Failed to init P2P", err);
       }
     };
     initP2p();
 
     return () => {
+      if (intervalId) clearInterval(intervalId);
       p2p.destroy();
     };
   }, []);

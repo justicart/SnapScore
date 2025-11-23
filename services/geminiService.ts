@@ -38,22 +38,25 @@ const responseSchema: Schema = {
 };
 
 const getApiKey = (): string | undefined => {
-  console.log(process.env)
-  // 1. Check Vite environment (import.meta.env)
+  // 1. Check Vite environment (import.meta.env) - Standard for this project structure
+  // We check this FIRST and safely to avoid ReferenceErrors in browsers
   try {
     // @ts-ignore
     if (typeof import.meta !== 'undefined' && import.meta.env) {
+      // @ts-ignore
+      if (import.meta.env.VITE_GEMINI_API_KEY) return import.meta.env.VITE_GEMINI_API_KEY;
       // @ts-ignore
       if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
       // @ts-ignore
       if (import.meta.env.API_KEY) return import.meta.env.API_KEY;
     }
   } catch (e) {
-    // Ignore errors accessing import.meta
+    console.warn("Error reading import.meta", e);
   }
 
   // 2. Check standard Node/CRA environment (process.env)
   try {
+    // CRITICAL: Check if process exists before accessing it to prevent Vite crashes
     if (typeof process !== 'undefined' && process.env) {
       if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
       if (process.env.API_KEY) return process.env.API_KEY;
@@ -70,7 +73,7 @@ export const analyzeHand = async (base64Image: string): Promise<ScanResult> => {
     const apiKey = getApiKey();
 
     if (!apiKey) {
-      console.error("Gemini API Key is missing. Please set VITE_API_KEY or REACT_APP_API_KEY in your environment variables.");
+      console.error("Gemini API Key is missing. Please set VITE_GEMINI_API_KEY in your Netlify environment variables.");
       throw new Error("API Key not configured");
     }
 
