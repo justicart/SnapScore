@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Player, CardSettings, Round, DetectedCard } from '../types';
 import { Button } from '../components/Button';
-import { IconSettings, IconCamera, IconPlus, IconX, IconQrCode, IconCheck, IconPencil, IconTrash } from '../components/Icons';
+import { IconSettings, IconCamera, IconPlus, IconX, IconQrCode, IconCheck, IconPencil, IconTrash, IconStar } from '../components/Icons';
 import { calculatePlayerTotal, calculateRoundScore, calculateCardScore } from '../utils/scoringUtils';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -115,23 +115,44 @@ export const GameView: React.FC<GameViewProps> = ({
 
   const manualEntryName = players.find(p => p.id === manualEntryPlayerId)?.name;
 
+  // Calculate winner
+  // Rules: Only if ALL players have at least one round recorded.
+  const allPlayersHavePlayed = players.length > 0 && players.every(p => p.rounds.length > 0);
+  let winningPlayerIds = new Set<string>();
+
+  if (allPlayersHavePlayed) {
+    const playerTotals = players.map(p => ({ id: p.id, total: calculatePlayerTotal(p, settings) }));
+    const totals = playerTotals.map(pt => pt.total);
+    const targetScore = settings.winningScoreType === 'highest' 
+        ? Math.max(...totals) 
+        : Math.min(...totals);
+    
+    playerTotals.forEach(pt => {
+        if (pt.total === targetScore) {
+            winningPlayerIds.add(pt.id);
+        }
+    });
+  }
+
   const myPlayers = players.filter(p => myPlayerIds.has(p.id));
   const otherPlayers = players.filter(p => !myPlayerIds.has(p.id));
   
   const renderPlayerCard = (player: Player) => {
     const totalScore = calculatePlayerTotal(player, settings);
+    const isWinner = winningPlayerIds.has(player.id);
+
     return (
-      <div key={player.id} className="bg-slate-800 rounded-xl p-4 shadow-lg border border-slate-700/50 relative overflow-hidden group">
-        <div className="flex justify-between items-start mb-3">
-          <h3 className="text-lg font-bold text-white truncate max-w-[120px]">{player.name}</h3>
-          <div className="text-right">
-            <span className="text-3xl font-black text-emerald-400">{totalScore}</span>
-            <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Pts</div>
-          </div>
+      <div key={player.id} className="bg-slate-800 rounded-xl p-3 shadow-lg border border-slate-700/50 relative overflow-hidden group">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-lg font-bold text-white truncate max-w-[180px] flex items-center gap-2">
+            {player.name}
+            {isWinner && <IconStar className="w-5 h-5 text-gold-400 drop-shadow-md animate-pulse-slow" />}
+          </h3>
+          <span className={`text-3xl font-black ${isWinner ? 'text-gold-400' : 'text-emerald-400'}`}>{totalScore}</span>
         </div>
         
         {/* History Snippet */}
-        <div className="flex gap-2 overflow-x-auto pb-2 mb-2 text-xs text-slate-400 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-1 text-xs text-slate-400 scrollbar-hide">
            {player.rounds.length === 0 && <span className="italic opacity-50">No rounds played</span>}
            {player.rounds.map((round, i) => (
                <button 
@@ -142,7 +163,7 @@ export const GameView: React.FC<GameViewProps> = ({
                       setActiveRoundPlayerId(player.id);
                       setActiveRoundIndex(i + 1);
                   }}
-                  className="bg-slate-900/50 hover:bg-slate-900 hover:text-emerald-400 px-2 py-1 rounded border border-transparent hover:border-emerald-500/30 transition-colors cursor-pointer"
+                  className="bg-slate-900/50 hover:bg-slate-900 hover:text-emerald-400 px-2 py-1 rounded border border-transparent hover:border-emerald-500/30 transition-colors cursor-pointer shrink-0"
                >
                  {calculateRoundScore(round, settings)}
                </button>
@@ -150,7 +171,7 @@ export const GameView: React.FC<GameViewProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-2 gap-3 mt-2">
+        <div className="grid grid-cols-2 gap-2 mt-1">
             <button 
                 onClick={() => onRequestScan(player.id)}
                 className="flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border-emerald-600/20"
@@ -197,13 +218,13 @@ export const GameView: React.FC<GameViewProps> = ({
       </header>
 
       {/* Player List */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-24">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
         {/* Render My Players First */}
         {myPlayers.map(renderPlayerCard)}
 
         {/* Divider if both sections exist */}
         {myPlayers.length > 0 && otherPlayers.length > 0 && (
-            <div className="flex items-center gap-3 py-2 opacity-50">
+            <div className="flex items-center gap-3 py-1 opacity-50">
                  <div className="h-px bg-slate-600 flex-1"></div>
                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Remote Players</span>
                  <div className="h-px bg-slate-600 flex-1"></div>

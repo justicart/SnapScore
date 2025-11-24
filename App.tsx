@@ -15,7 +15,8 @@ const DEFAULT_SETTINGS: CardSettings = {
   faceCardBehavior: 'fixed',
   fixedFaceValue: 10,
   numberCardBehavior: 'face',
-  fixedNumberValue: 5
+  fixedNumberValue: 5,
+  winningScoreType: 'lowest'
 };
 
 const App: React.FC = () => {
@@ -156,7 +157,8 @@ const App: React.FC = () => {
                 ...DEFAULT_SETTINGS,
                 ...parsed,
                 fixedFaceValue: parsed.fixedFaceValue ?? parsed.faceValue ?? DEFAULT_SETTINGS.fixedFaceValue,
-                faceCardBehavior: parsed.faceCardBehavior ?? DEFAULT_SETTINGS.faceCardBehavior
+                faceCardBehavior: parsed.faceCardBehavior ?? DEFAULT_SETTINGS.faceCardBehavior,
+                winningScoreType: parsed.winningScoreType ?? DEFAULT_SETTINGS.winningScoreType
             };
             setSettings(migratedSettings);
         }

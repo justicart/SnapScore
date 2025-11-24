@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Player } from '../types';
 import { Button } from '../components/Button';
 import { IconTrash, IconSettings, IconPlus, IconQrCode, IconCheck } from '../components/Icons';
@@ -22,6 +22,18 @@ export const SetupView: React.FC<SetupViewProps> = ({
 }) => {
   const [names, setNames] = useState<string[]>(['']);
   const [joined, setJoined] = useState(false);
+  
+  // Refs for auto-focusing new inputs
+  const lastInputRef = useRef<HTMLInputElement>(null);
+  const prevNamesLength = useRef(names.length);
+
+  // Focus the last input when a new player is added
+  useEffect(() => {
+    if (names.length > prevNamesLength.current) {
+      lastInputRef.current?.focus();
+    }
+    prevNamesLength.current = names.length;
+  }, [names.length]);
   
   const handleNameChange = (index: number, value: string) => {
     const newNames = [...names];
@@ -155,6 +167,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
             {names.map((name, index) => (
                 <div key={index} className="flex gap-2 group">
                 <input
+                    ref={index === names.length - 1 ? lastInputRef : null}
                     type="text"
                     value={name}
                     onChange={(e) => handleNameChange(index, e.target.value)}

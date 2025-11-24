@@ -1,7 +1,7 @@
 
 export interface DetectedCard {
   rank: string; // '2'-'10', 'J', 'Q', 'K', 'A', 'Joker'
-  suit: string; // 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'None'
+  suit: string; // 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'
   id: string;   // Unique ID for React keys
 }
 
@@ -22,6 +22,7 @@ export interface CardSettings {
   fixedFaceValue?: number; // Used if faceCardBehavior is 'fixed'
   numberCardBehavior: 'face' | 'fixed'; // 'face' means 2=2, 10=10
   fixedNumberValue?: number; // Used if numberCardBehavior is 'fixed'
+  winningScoreType: 'lowest' | 'highest';
 }
 
 export enum AppView {

@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { CardSettings } from '../types';
 import { Button } from '../components/Button';
@@ -27,6 +28,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
 
       <div className="p-6 space-y-6 overflow-y-auto flex-1">
         
+        {/* Winning Condition */}
+        <div className="space-y-2">
+            <label className="block text-sm font-medium text-emerald-400 uppercase tracking-wider">Winning Condition</label>
+            <div className="flex gap-2 p-1 bg-slate-800 rounded-lg">
+                <button
+                type="button"
+                onClick={() => handleChange('winningScoreType', 'lowest')}
+                className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
+                    formData.winningScoreType === 'lowest' 
+                    ? 'bg-emerald-600 text-white shadow-lg' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                >
+                Lowest Score
+                </button>
+                <button
+                type="button"
+                onClick={() => handleChange('winningScoreType', 'highest')}
+                className={`flex-1 py-2 rounded-md text-sm font-medium transition-all ${
+                    formData.winningScoreType === 'highest' 
+                    ? 'bg-emerald-600 text-white shadow-lg' 
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                >
+                Highest Score
+                </button>
+            </div>
+            <p className="text-xs text-slate-500">
+                {formData.winningScoreType === 'lowest' 
+                ? 'The player with the fewest points wins (e.g. Golf).' 
+                : 'The player with the most points wins.'}
+            </p>
+        </div>
+
         {/* Number Cards */}
         <div className="space-y-2">
           <label className="block text-sm font-medium text-emerald-400 uppercase tracking-wider">Number Cards (2-10)</label>
