@@ -51,26 +51,6 @@ export const GameView: React.FC<GameViewProps> = ({
   // Edit state for active round
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
 
-  // Viewport Height for Mobile Keyboard Handling
-  const [viewportHeight, setViewportHeight] = useState<string | number>('100dvh');
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (window.visualViewport) {
-        // We set the height to the visual viewport height to ensure 
-        // footers are visible above the keyboard
-        setViewportHeight(window.visualViewport.height);
-      }
-    };
-
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', handleResize);
-      handleResize(); // Initial set
-    }
-    
-    return () => window.visualViewport?.removeEventListener('resize', handleResize);
-  }, []);
-
   // Load my players
   const [myPlayerIds] = useState<Set<string>>(() => {
     try {
@@ -454,8 +434,7 @@ export const GameView: React.FC<GameViewProps> = ({
       {/* Manual Entry Modal - Full Screen */}
       {manualEntryPlayerId && (
         <div 
-          className="fixed top-0 left-0 right-0 z-[60] bg-felt-900 flex flex-col w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800"
-          style={{ height: viewportHeight }}
+          className="fixed inset-0 z-[60] bg-felt-900 flex flex-col w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800"
         >
             {/* Header */}
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
@@ -498,8 +477,7 @@ export const GameView: React.FC<GameViewProps> = ({
       {/* Round Details Modal - Full Screen */}
       {activeRound && (
         <div 
-          className="fixed top-0 left-0 right-0 z-[60] bg-felt-900 flex flex-col w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800"
-          style={{ height: viewportHeight }}
+          className="fixed inset-0 z-[60] bg-felt-900 flex flex-col w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800"
         >
             {/* Header */}
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
