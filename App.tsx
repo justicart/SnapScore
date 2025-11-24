@@ -191,6 +191,11 @@ const App: React.FC = () => {
     setView(AppView.GAME);
   };
 
+  const handleUpdatePlayers = (newPlayers: Player[]) => {
+      if (isClient) return; // Clients cannot reorder/delete roster directly
+      setPlayers(newPlayers);
+  };
+
   const handleSaveRound = (playerId: string, round: Round) => {
     if (isClient) {
         p2p.sendToHost({
@@ -305,6 +310,7 @@ const App: React.FC = () => {
           players={players}
           settings={settings}
           onSaveRound={handleSaveRound}
+          onUpdatePlayers={handleUpdatePlayers}
           onRequestScan={handleRequestScan}
           onOpenSettings={() => setView(AppView.SETTINGS)}
           onReset={handleResetGame}

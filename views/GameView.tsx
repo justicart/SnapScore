@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Player, CardSettings, Round, DetectedCard } from '../types';
 import { Button } from '../components/Button';
-import { IconSettings, IconCamera, IconPlus, IconX, IconQrCode, IconCheck, IconPencil, IconTrash, IconStar } from '../components/Icons';
+import { IconSettings, IconCamera, IconPlus, IconX, IconQrCode, IconCheck, IconPencil, IconTrash, IconStar, IconChevronLeft } from '../components/Icons';
 import { calculatePlayerTotal, calculateRoundScore, calculateCardScore } from '../utils/scoringUtils';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -14,6 +14,7 @@ interface GameViewProps {
   settings: CardSettings;
   onSaveRound: (playerId: string, round: Round) => void;
   onRequestScan: (playerId: string, roundId?: string) => void;
+  onUpdatePlayers: (players: Player[]) => void;
   onOpenSettings: () => void;
   onReset: () => void;
   onOpenMultiplayer: () => void;
@@ -25,6 +26,7 @@ export const GameView: React.FC<GameViewProps> = ({
   settings,
   onSaveRound, 
   onRequestScan,
+  onUpdatePlayers,
   onOpenSettings,
   onReset,
   onOpenMultiplayer,
@@ -34,6 +36,11 @@ export const GameView: React.FC<GameViewProps> = ({
   const [manualEntryRoundId, setManualEntryRoundId] = useState<string | null>(null);
   const [manualScore, setManualScore] = useState<string>('');
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [playerToDelete, setPlayerToDelete] = useState<string | null>(null);
+  
+  // Roster Editing State
+  const [isEditMode, setIsEditMode] = useState(false);
+  const pressTimer = useRef<NodeJS.Timeout | null>(null);
   
   // State for viewing round details
   const [activeRound, setActiveRound] = useState<Round | null>(null);
@@ -44,6 +51,26 @@ export const GameView: React.FC<GameViewProps> = ({
   // Edit state for active round
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
 
+  // Viewport Height for Mobile Keyboard Handling
+  const [viewportHeight, setViewportHeight] = useState<string | number>('100dvh');
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.visualViewport) {
+        // We set the height to the visual viewport height to ensure 
+        // footers are visible above the keyboard
+        setViewportHeight(window.visualViewport.height);
+      }
+    };
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleResize);
+      handleResize(); // Initial set
+    }
+    
+    return () => window.visualViewport?.removeEventListener('resize', handleResize);
+  }, []);
+
   // Load my players
   const [myPlayerIds] = useState<Set<string>>(() => {
     try {
@@ -53,6 +80,8 @@ export const GameView: React.FC<GameViewProps> = ({
         return new Set();
     }
   });
+
+  const myPlayers = players.filter(p => myPlayerIds.has(p.id));
 
   const manualInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,6 +116,56 @@ export const GameView: React.FC<GameViewProps> = ({
       if (activeRound && activeRoundPlayerId) {
           onSaveRound(activeRoundPlayerId, activeRound);
           setActiveRound(null);
+      }
+  };
+
+  // --- Roster Editing Logic ---
+  const handlePressStart = () => {
+      if (isClient) return; // Clients cannot edit roster
+      pressTimer.current = setTimeout(() => {
+          if (navigator.vibrate) navigator.vibrate(50);
+          setIsEditMode(true);
+      }, 600);
+  };
+
+  const handlePressEnd = () => {
+      if (pressTimer.current) {
+          clearTimeout(pressTimer.current);
+          pressTimer.current = null;
+      }
+  };
+  
+  // Cancel long press if user scrolls
+  const handleTouchMove = () => {
+      if (pressTimer.current) {
+          clearTimeout(pressTimer.current);
+          pressTimer.current = null;
+      }
+  };
+
+  const movePlayer = (index: number, direction: 'up' | 'down') => {
+      if (direction === 'up' && index === 0) return;
+      if (direction === 'down' && index === players.length - 1) return;
+      
+      const newPlayers = [...players];
+      const targetIndex = direction === 'up' ? index - 1 : index + 1;
+      
+      [newPlayers[index], newPlayers[targetIndex]] = [newPlayers[targetIndex], newPlayers[index]];
+      onUpdatePlayers(newPlayers);
+  };
+
+  const handleNameChange = (index: number, newName: string) => {
+      const newPlayers = [...players];
+      newPlayers[index] = { ...newPlayers[index], name: newName };
+      onUpdatePlayers(newPlayers);
+  };
+
+  const confirmDeletePlayer = () => {
+      if (playerToDelete) {
+          onUpdatePlayers(players.filter(p => p.id !== playerToDelete));
+          setPlayerToDelete(null);
+          // If no players left, exit edit mode
+          if (players.length <= 1) setIsEditMode(false);
       }
   };
 
@@ -134,16 +213,64 @@ export const GameView: React.FC<GameViewProps> = ({
     });
   }
 
-  const myPlayers = players.filter(p => myPlayerIds.has(p.id));
-  const otherPlayers = players.filter(p => !myPlayerIds.has(p.id));
-  
-  const renderPlayerCard = (player: Player) => {
+  const renderPlayerCard = (player: Player, index: number) => {
     const totalScore = calculatePlayerTotal(player, settings);
     const isWinner = winningPlayerIds.has(player.id);
+    const isLocal = myPlayerIds.has(player.id);
+
+    if (isEditMode) {
+        return (
+            <div key={player.id} className="bg-slate-800 rounded-xl p-3 shadow-lg border-2 border-dashed border-emerald-500/50 flex items-center justify-between">
+                <div className="flex items-center gap-3 flex-1 mr-2">
+                    <div className="flex flex-col gap-1 shrink-0">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); movePlayer(index, 'up'); }}
+                            disabled={index === 0}
+                            className="p-1 bg-slate-700 rounded disabled:opacity-30 text-emerald-400 z-10 relative hover:bg-slate-600"
+                        >
+                            <svg className="w-4 h-4 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+                        </button>
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); movePlayer(index, 'down'); }}
+                            disabled={index === players.length - 1}
+                            className="p-1 bg-slate-700 rounded disabled:opacity-30 text-emerald-400 z-10 relative hover:bg-slate-600"
+                        >
+                             <svg className="w-4 h-4 -rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
+                        </button>
+                    </div>
+                    <input 
+                        type="text"
+                        value={player.name}
+                        onChange={(e) => handleNameChange(index, e.target.value)}
+                        className="bg-transparent border-b border-slate-600 focus:border-emerald-500 text-white font-bold text-lg focus:outline-none w-full min-w-0"
+                        placeholder="Player Name"
+                    />
+                </div>
+                <button 
+                    onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setPlayerToDelete(player.id); 
+                    }}
+                    className="p-3 bg-red-500/10 text-red-500 rounded-lg z-10 relative hover:bg-red-500/20 cursor-pointer"
+                >
+                    <IconTrash className="w-6 h-6 pointer-events-none" />
+                </button>
+            </div>
+        )
+    }
 
     return (
-      <div key={player.id} className="bg-slate-800 rounded-xl p-3 shadow-lg border border-slate-700/50 relative overflow-hidden group">
-        <div className="flex justify-between items-center mb-2">
+      <div 
+        key={player.id} 
+        className="bg-slate-800 rounded-xl p-3 shadow-lg border border-slate-700/50 relative overflow-hidden group select-none"
+        onMouseDown={handlePressStart}
+        onMouseUp={handlePressEnd}
+        onMouseLeave={handlePressEnd}
+        onTouchStart={handlePressStart}
+        onTouchEnd={handlePressEnd}
+        onTouchMove={handleTouchMove}
+      >
+        <div className="flex justify-between items-center mb-2 pointer-events-none">
           <h3 className="text-lg font-bold text-white truncate max-w-[180px] flex items-center gap-2">
             {player.name}
             {isWinner && <IconStar className="w-5 h-5 text-gold-400 drop-shadow-md animate-pulse-slow" />}
@@ -157,7 +284,8 @@ export const GameView: React.FC<GameViewProps> = ({
            {player.rounds.map((round, i) => (
                <button 
                   key={round.id || i} 
-                  onClick={() => {
+                  onClick={(e) => {
+                      e.stopPropagation();
                       setActiveRound(round);
                       setActiveRoundPlayerName(player.name);
                       setActiveRoundPlayerId(player.id);
@@ -171,16 +299,17 @@ export const GameView: React.FC<GameViewProps> = ({
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-2 gap-2 mt-1">
+        <div className="grid grid-cols-2 gap-2 mt-1 relative z-10">
             <button 
-                onClick={() => onRequestScan(player.id)}
+                onClick={(e) => { e.stopPropagation(); onRequestScan(player.id); }}
                 className="flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border-emerald-600/20"
             >
                 <IconCamera className="w-4 h-4" />
                 Scan Hand
             </button>
             <button 
-                 onClick={() => {
+                 onClick={(e) => {
+                    e.stopPropagation();
                     setManualEntryPlayerId(player.id);
                     setManualEntryRoundId(null);
                     setManualScore('');
@@ -198,50 +327,90 @@ export const GameView: React.FC<GameViewProps> = ({
   return (
     <div className="flex flex-col h-full relative">
       {/* Header */}
-      <header className="bg-slate-900/50 backdrop-blur-md border-b border-slate-800 p-4 sticky top-0 z-10 flex justify-between items-center">
+      <header className="bg-slate-900/50 backdrop-blur-md border-b border-slate-800 p-4 sticky top-0 z-10 flex justify-between items-center transition-colors duration-300" 
+         style={{ backgroundColor: isEditMode ? 'rgba(6, 78, 59, 0.9)' : undefined }}>
         <div>
-          <h1 className="text-xl font-bold text-white flex items-center gap-2">
-             Scoreboard
-             {isClient && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">JOINED</span>}
-          </h1>
-          <p className="text-xs text-slate-400">Round {Math.max(1, ...players.map(p => p.rounds.length)) + (players.some(p => p.rounds.length < Math.max(...players.map(pl => pl.rounds.length))) ? 0 : 1)}</p>
+            {isEditMode ? (
+                <h1 className="text-xl font-bold text-white animate-pulse">Editing Roster</h1>
+            ) : (
+                <>
+                <h1 className="text-xl font-bold text-white flex items-center gap-2">
+                    Scoreboard
+                    {isClient && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">JOINED</span>}
+                </h1>
+                <p className="text-xs text-slate-400">Round {Math.max(1, ...players.map(p => p.rounds.length)) + (players.some(p => p.rounds.length < Math.max(...players.map(pl => pl.rounds.length))) ? 0 : 1)}</p>
+                </>
+            )}
         </div>
         <div className="flex gap-2">
-            <button onClick={() => setShowResetConfirm(true)} className="text-xs text-slate-500 hover:text-red-400 px-2">New Game</button>
-             <button onClick={onOpenMultiplayer} className="p-2 rounded-full bg-slate-800 text-emerald-400 hover:bg-slate-700">
-                <IconQrCode className="w-5 h-5" />
-            </button>
-            <button onClick={onOpenSettings} className="p-2 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700">
-            <IconSettings className="w-5 h-5" />
-            </button>
+            {isEditMode ? (
+                <button 
+                    onClick={() => setIsEditMode(false)}
+                    className="bg-white text-emerald-900 px-4 py-2 rounded-full font-bold text-sm shadow-lg"
+                >
+                    Done
+                </button>
+            ) : (
+                <>
+                <button onClick={() => setShowResetConfirm(true)} className="text-xs text-slate-500 hover:text-red-400 px-2">New Game</button>
+                <button onClick={onOpenMultiplayer} className="p-2 rounded-full bg-slate-800 text-emerald-400 hover:bg-slate-700">
+                    <IconQrCode className="w-5 h-5" />
+                </button>
+                <button onClick={onOpenSettings} className="p-2 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700">
+                <IconSettings className="w-5 h-5" />
+                </button>
+                </>
+            )}
         </div>
       </header>
 
       {/* Player List */}
       <div className="flex-1 overflow-y-auto p-4 space-y-3 pb-24">
-        {/* Render My Players First */}
-        {myPlayers.map(renderPlayerCard)}
-
-        {/* Divider if both sections exist */}
-        {myPlayers.length > 0 && otherPlayers.length > 0 && (
-            <div className="flex items-center gap-3 py-1 opacity-50">
-                 <div className="h-px bg-slate-600 flex-1"></div>
-                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Remote Players</span>
-                 <div className="h-px bg-slate-600 flex-1"></div>
-            </div>
+        {/* If in edit mode, show simple list. If standard, show split list */}
+        {isEditMode ? (
+            players.map((p, i) => renderPlayerCard(p, i))
+        ) : (
+            <>
+                {myPlayers.length > 0 && players.filter(p => !myPlayerIds.has(p.id)).length > 0 && (
+                     // Only split if we have local AND remote players
+                    players.filter(p => myPlayerIds.has(p.id)).map(p => renderPlayerCard(p, players.indexOf(p)))
+                )}
+                
+                {myPlayers.length > 0 && players.filter(p => !myPlayerIds.has(p.id)).length > 0 && (
+                     <div className="flex items-center gap-3 py-1 opacity-50">
+                        <div className="h-px bg-slate-600 flex-1"></div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Remote Players</span>
+                        <div className="h-px bg-slate-600 flex-1"></div>
+                    </div>
+                )}
+                
+                {/* 
+                   Fallback logic: if we don't have the split scenario, 
+                   or just for the rest of the players
+                */}
+                {players.map((p, i) => {
+                   const isSplitView = myPlayers.length > 0 && players.length > myPlayers.length;
+                   // If split view is active, skip the ones we already rendered
+                   if (isSplitView && myPlayerIds.has(p.id)) return null;
+                   return renderPlayerCard(p, i);
+                })}
+            </>
         )}
-
-        {/* Render Other Players */}
-        {otherPlayers.map(renderPlayerCard)}
         
         {players.length === 0 && (
             <div className="text-center py-10 opacity-50">
                 <p>No players added.</p>
             </div>
         )}
+        
+        {!isClient && !isEditMode && players.length > 0 && (
+             <div className="text-center mt-8">
+                 <p className="text-xs text-slate-600">Tip: Press and hold a player card to reorder, rename, or delete.</p>
+             </div>
+        )}
       </div>
 
-      {/* Reset Confirmation Dialog - Kept as centered alert */}
+      {/* Reset Confirmation Dialog */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
@@ -262,9 +431,32 @@ export const GameView: React.FC<GameViewProps> = ({
         </div>
       )}
 
+      {/* Delete Player Confirmation Dialog */}
+      {playerToDelete && (
+        <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
+                <h3 className="text-xl font-bold text-white mb-2">Remove Player?</h3>
+                <p className="text-slate-400 mb-6 text-sm">
+                    <span className="text-emerald-400 font-bold">{players.find(p => p.id === playerToDelete)?.name}</span> will be removed from the game.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                    <Button variant="secondary" onClick={() => setPlayerToDelete(null)}>
+                        Cancel
+                    </Button>
+                    <Button variant="danger" onClick={confirmDeletePlayer}>
+                        Remove
+                    </Button>
+                </div>
+            </div>
+        </div>
+      )}
+
       {/* Manual Entry Modal - Full Screen */}
       {manualEntryPlayerId && (
-        <div className="fixed inset-0 z-[60] bg-felt-900 flex flex-col h-[100dvh] w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800">
+        <div 
+          className="fixed top-0 left-0 right-0 z-[60] bg-felt-900 flex flex-col w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800"
+          style={{ height: viewportHeight }}
+        >
             {/* Header */}
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
                 <h3 className="text-lg font-bold text-white">{manualEntryRoundId ? 'Edit Score' : 'Add Score'}</h3>
@@ -305,7 +497,10 @@ export const GameView: React.FC<GameViewProps> = ({
 
       {/* Round Details Modal - Full Screen */}
       {activeRound && (
-        <div className="fixed inset-0 z-[60] bg-felt-900 flex flex-col h-[100dvh] w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800">
+        <div 
+          className="fixed top-0 left-0 right-0 z-[60] bg-felt-900 flex flex-col w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800"
+          style={{ height: viewportHeight }}
+        >
             {/* Header */}
             <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
                 <div>

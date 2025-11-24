@@ -52,6 +52,17 @@ export const SetupView: React.FC<SetupViewProps> = ({
     }
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, index: number) => {
+    // Check for Tab press on the last input
+    if (e.key === 'Tab' && !e.shiftKey && index === names.length - 1) {
+      // Only add if the current field has text to prevent infinite empty loops
+      if (names[index].trim() !== '') {
+        e.preventDefault();
+        addPlayer();
+      }
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -171,6 +182,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
                     type="text"
                     value={name}
                     onChange={(e) => handleNameChange(index, e.target.value)}
+                    onKeyDown={(e) => handleKeyDown(e, index)}
                     placeholder={isClient ? "Your Name" : `Player ${players.length + index + 1} Name`}
                     className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow"
                     autoFocus={index === 0 && names.length === 1}
