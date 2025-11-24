@@ -14,8 +14,8 @@ const SYSTEM_PROMPT = `
     4. Return the Rank and Suit for each card.
     
     FORMAT:
-    - Rank: Use '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', or 'JOKER'.
-    - Suit: Use 'Spades', 'Hearts', 'Diamonds', 'Clubs'. For Jokers, use 'None'.
+    - Rank: Use '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', or 'Joker'.
+    - Suit: Use 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars'. For Jokers, use 'None'.
 `;
 
 const responseSchema: Schema = {
@@ -26,8 +26,8 @@ const responseSchema: Schema = {
       items: {
         type: Type.OBJECT,
         properties: {
-            rank: { type: Type.STRING, description: "Rank of the card (e.g., 'A', '10', 'K', 'JOKER')" },
-            suit: { type: Type.STRING, description: "Suit of the card (e.g., 'Hearts', 'None')" }
+            rank: { type: Type.STRING, description: "Rank of the card (e.g., 'A', '10', 'K', 'Joker')" },
+            suit: { type: Type.STRING, description: "Suit of the card (e.g., 'Hearts', 'Stars', 'None')" }
         },
         required: ["rank", "suit"]
       },
@@ -38,34 +38,37 @@ const responseSchema: Schema = {
 };
 
 const getApiKey = (): string | undefined => {
-  // 1. Check Vite environment (import.meta.env) - Standard for this project structure
-  // We check this FIRST and safely to avoid ReferenceErrors in browsers
+  let key: string | undefined = undefined;
+
+  // 1. Try process.env.API_KEY (System Standard)
+  // We use a safe check to avoid ReferenceError in browsers where 'process' is not defined
   try {
     // @ts-ignore
-    if (typeof import.meta !== 'undefined' && import.meta.env) {
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
       // @ts-ignore
-      if (import.meta.env.VITE_GEMINI_API_KEY) return import.meta.env.VITE_GEMINI_API_KEY;
-      // @ts-ignore
-      if (import.meta.env.VITE_API_KEY) return import.meta.env.VITE_API_KEY;
-      // @ts-ignore
-      if (import.meta.env.API_KEY) return import.meta.env.API_KEY;
+      key = process.env.API_KEY;
     }
   } catch (e) {
-    console.warn("Error reading import.meta", e);
+    // Ignore process errors
   }
 
-  // 2. Check standard Node/CRA environment (process.env)
-  try {
-    // CRITICAL: Check if process exists before accessing it to prevent Vite crashes
-    if (typeof process !== 'undefined' && process.env) {
-      if (process.env.REACT_APP_API_KEY) return process.env.REACT_APP_API_KEY;
-      if (process.env.API_KEY) return process.env.API_KEY;
+  // 2. Try Vite Environment Variables (User Standard)
+  // If no key found yet, check import.meta.env
+  if (!key) {
+    try {
+      // @ts-ignore
+      if (typeof import.meta !== 'undefined' && import.meta.env) {
+        // @ts-ignore
+        if (import.meta.env.VITE_GEMINI_API_KEY) key = import.meta.env.VITE_GEMINI_API_KEY;
+        // @ts-ignore
+        else if (import.meta.env.VITE_API_KEY) key = import.meta.env.VITE_API_KEY;
+      }
+    } catch (e) {
+      // Ignore meta errors
     }
-  } catch (e) {
-    // Ignore errors accessing process
   }
 
-  return undefined;
+  return key;
 };
 
 export const analyzeHand = async (base64Image: string): Promise<ScanResult> => {
@@ -73,7 +76,7 @@ export const analyzeHand = async (base64Image: string): Promise<ScanResult> => {
     const apiKey = getApiKey();
 
     if (!apiKey) {
-      console.error("Gemini API Key is missing. Please set VITE_GEMINI_API_KEY in your Netlify environment variables.");
+      console.error("Gemini API Key is missing. Ensure VITE_GEMINI_API_KEY is set in Netlify.");
       throw new Error("API Key not configured");
     }
 

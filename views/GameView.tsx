@@ -2,9 +2,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Player, CardSettings, Round, DetectedCard } from '../types';
 import { Button } from '../components/Button';
-import { IconSettings, IconCamera, IconPlus, IconX, IconQrCode, IconCheck } from '../components/Icons';
+import { IconSettings, IconCamera, IconPlus, IconX, IconQrCode, IconCheck, IconPencil, IconTrash } from '../components/Icons';
 import { calculatePlayerTotal, calculateRoundScore, calculateCardScore } from '../utils/scoringUtils';
 import { v4 as uuidv4 } from 'uuid';
+
+const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', 'Joker'];
+const SUITS = ['Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'];
 
 interface GameViewProps {
   players: Player[];
@@ -37,6 +40,9 @@ export const GameView: React.FC<GameViewProps> = ({
   const [activeRoundPlayerName, setActiveRoundPlayerName] = useState<string | null>(null);
   const [activeRoundPlayerId, setActiveRoundPlayerId] = useState<string | null>(null);
   const [activeRoundIndex, setActiveRoundIndex] = useState<number | null>(null);
+  
+  // Edit state for active round
+  const [editingCardId, setEditingCardId] = useState<string | null>(null);
 
   // Load my players
   const [myPlayerIds] = useState<Set<string>>(() => {
@@ -75,6 +81,36 @@ export const GameView: React.FC<GameViewProps> = ({
             setManualScore('');
         }
     }
+  };
+
+  const handleSaveChanges = () => {
+      if (activeRound && activeRoundPlayerId) {
+          onSaveRound(activeRoundPlayerId, activeRound);
+          setActiveRound(null);
+      }
+  };
+
+  // Helper to update active round cards
+  const updateActiveRoundCard = (cardId: string, field: 'rank' | 'suit', value: string) => {
+      if (activeRound && activeRound.type === 'scan') {
+          const updatedCards = activeRound.cards.map(c => c.id === cardId ? { ...c, [field]: value } : c);
+          setActiveRound({ ...activeRound, cards: updatedCards });
+      }
+  };
+
+  const deleteActiveRoundCard = (cardId: string) => {
+      if (activeRound && activeRound.type === 'scan') {
+          const updatedCards = activeRound.cards.filter(c => c.id !== cardId);
+          setActiveRound({ ...activeRound, cards: updatedCards });
+      }
+  };
+
+  const addActiveRoundCard = () => {
+      if (activeRound && activeRound.type === 'scan') {
+          const newCard: DetectedCard = { id: uuidv4(), rank: 'A', suit: 'Spades' };
+          setActiveRound({ ...activeRound, cards: [...activeRound.cards, newCard] });
+          setEditingCardId(newCard.id);
+      }
   };
 
   const manualEntryName = players.find(p => p.id === manualEntryPlayerId)?.name;
@@ -184,10 +220,10 @@ export const GameView: React.FC<GameViewProps> = ({
         )}
       </div>
 
-      {/* Reset Confirmation Modal */}
+      {/* Reset Confirmation Dialog - Kept as centered alert */}
       {showResetConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="fixed inset-0 md:relative bg-slate-800 w-full h-auto max-w-sm md:rounded-2xl shadow-2xl border-none md:border border-slate-700 p-6 flex flex-col justify-center">
+            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
                 <h3 className="text-xl font-bold text-white mb-2">Start New Game?</h3>
                 <p className="text-slate-400 mb-6 text-sm">All current scores and progress will be lost.</p>
                 <div className="grid grid-cols-2 gap-3">
@@ -205,90 +241,164 @@ export const GameView: React.FC<GameViewProps> = ({
         </div>
       )}
 
-      {/* Manual Entry Modal */}
+      {/* Manual Entry Modal - Full Screen */}
       {manualEntryPlayerId && (
-        <div className="fixed inset-0 z-[60] bg-black/90 md:bg-black/80 backdrop-blur-sm flex items-center justify-center md:p-4">
-            <div className="fixed inset-0 md:relative bg-slate-800 w-full h-full md:h-auto md:max-w-md md:rounded-2xl shadow-2xl border-none md:border border-slate-700 overflow-hidden flex flex-col">
-                <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50 shrink-0">
-                    <h3 className="text-lg font-bold text-white">{manualEntryRoundId ? 'Edit Score' : 'Add Score'}</h3>
-                    <button onClick={() => { setManualEntryPlayerId(null); setManualEntryRoundId(null); }} className="text-slate-400 hover:text-white">
-                        <IconX className="w-6 h-6" />
-                    </button>
-                </div>
-                <form onSubmit={handleManualSubmit} className="p-6 flex-1 flex flex-col justify-center space-y-8">
-                    <div className="text-center">
-                        <p className="text-slate-400 text-sm mb-2">Enter points for</p>
-                        <p className="text-2xl font-bold text-emerald-400">{manualEntryName}</p>
-                    </div>
-                    
-                    <input
-                        ref={manualInputRef}
-                        type="number"
-                        value={manualScore}
-                        onChange={(e) => setManualScore(e.target.value)}
-                        placeholder="0"
-                        autoFocus
-                        className="w-full bg-slate-900 border-2 border-slate-700 focus:border-emerald-500 rounded-xl text-center text-5xl font-bold text-white py-6 focus:outline-none transition-colors"
-                    />
+        <div className="fixed inset-0 z-[60] bg-felt-900 flex flex-col h-[100dvh] w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
+                <h3 className="text-lg font-bold text-white">{manualEntryRoundId ? 'Edit Score' : 'Add Score'}</h3>
+                <button onClick={() => { setManualEntryPlayerId(null); setManualEntryRoundId(null); }} className="text-slate-400 hover:text-white p-2 -mr-2 rounded-full">
+                    <IconX className="w-6 h-6" />
+                </button>
+            </div>
 
-                    <div className="grid grid-cols-2 gap-4 mt-auto">
-                        <Button type="button" variant="secondary" onClick={() => { setManualEntryPlayerId(null); setManualEntryRoundId(null); }} className="py-4">
-                            Cancel
-                        </Button>
-                        <Button type="submit" className="py-4">
-                            Save
-                        </Button>
-                    </div>
-                </form>
+            {/* Content */}
+            <form onSubmit={handleManualSubmit} className="flex-1 flex flex-col justify-center p-6 overflow-y-auto">
+                <div className="text-center space-y-2 mb-8">
+                    <p className="text-slate-400 text-sm">Enter points for</p>
+                    <p className="text-2xl font-bold text-emerald-400">{manualEntryName}</p>
+                </div>
+                
+                <input
+                    ref={manualInputRef}
+                    type="number"
+                    value={manualScore}
+                    onChange={(e) => setManualScore(e.target.value)}
+                    placeholder="0"
+                    autoFocus
+                    className="w-full bg-slate-900 border-2 border-slate-700 focus:border-emerald-500 rounded-2xl text-center text-6xl font-black text-white py-8 focus:outline-none transition-all shadow-inner"
+                />
+            </form>
+
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-800 bg-slate-900/30 shrink-0 grid grid-cols-2 gap-4">
+                <Button type="button" variant="secondary" onClick={() => { setManualEntryPlayerId(null); setManualEntryRoundId(null); }}>
+                    Cancel
+                </Button>
+                <Button type="button" onClick={handleManualSubmit} className="bg-emerald-500 text-white">
+                    {isClient ? "Save" : "Save"}
+                </Button>
             </div>
         </div>
       )}
 
-      {/* Round Details Modal */}
+      {/* Round Details Modal - Full Screen */}
       {activeRound && (
-        <div className="fixed inset-0 z-[60] bg-black/90 md:bg-black/80 backdrop-blur-sm flex items-center justify-center md:p-4">
-            <div className="fixed inset-0 md:relative bg-slate-800 w-full h-full md:h-auto md:max-h-[80vh] md:max-w-md md:rounded-2xl shadow-2xl border-none md:border border-slate-700 overflow-hidden flex flex-col">
-                <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900/50 shrink-0">
-                    <div>
-                        <h3 className="text-lg font-bold text-white">Round {activeRoundIndex}</h3>
-                        <p className="text-xs text-slate-400">{activeRoundPlayerName}</p>
+        <div className="fixed inset-0 z-[60] bg-felt-900 flex flex-col h-[100dvh] w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800">
+            {/* Header */}
+            <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
+                <div>
+                    <h3 className="text-lg font-bold text-white">Round {activeRoundIndex}</h3>
+                    <p className="text-xs text-slate-400">{activeRoundPlayerName}</p>
+                </div>
+                <button onClick={() => setActiveRound(null)} className="text-slate-400 hover:text-white p-2 -mr-2 rounded-full">
+                    <IconX className="w-6 h-6" />
+                </button>
+            </div>
+
+            {/* Scrollable Content */}
+            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+                {activeRound.type === 'manual' ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center py-12">
+                            <div className="bg-slate-800/50 rounded-full w-24 h-24 flex items-center justify-center mb-6">
+                            <IconPlus className="w-10 h-10 text-slate-500" />
+                            </div>
+                            <p className="text-slate-400 mb-2">Manual Entry</p>
+                            <p className="text-6xl font-bold text-emerald-400">{activeRound.score}</p>
+                            <p className="text-sm text-slate-500 mt-2">Points added manually</p>
                     </div>
-                    <button onClick={() => setActiveRound(null)} className="text-slate-400 hover:text-white">
-                        <IconX className="w-6 h-6" />
-                    </button>
-                </div>
+                ) : (
+                    <div>
+                        <ul className="space-y-2">
+                            {activeRound.cards.map((card) => (
+                                <li key={card.id} className="flex justify-between items-center bg-slate-800/50 p-2 rounded-lg border border-slate-700/50 min-h-[48px]">
+                                    {editingCardId === card.id ? (
+                                        <div className="flex items-center gap-2 flex-1">
+                                            <select 
+                                                value={card.rank} 
+                                                onChange={(e) => updateActiveRoundCard(card.id, 'rank', e.target.value)}
+                                                className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 focus:border-emerald-500 outline-none w-16 text-center"
+                                            >
+                                                {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                                            </select>
+                                            <span className="text-slate-500 text-xs">of</span>
+                                            <select 
+                                                value={card.suit} 
+                                                onChange={(e) => updateActiveRoundCard(card.id, 'suit', e.target.value)}
+                                                className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 focus:border-emerald-500 outline-none flex-1"
+                                            >
+                                                {SUITS.map(s => <option key={s} value={s}>{s}</option>)}
+                                            </select>
+                                            <button 
+                                                onClick={() => setEditingCardId(null)}
+                                                className="p-1.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                                            >
+                                                <IconCheck className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={() => deleteActiveRoundCard(card.id)}
+                                                className="p-1.5 rounded bg-slate-700 text-slate-400 hover:text-red-400 hover:bg-slate-600 ml-1"
+                                            >
+                                                <IconTrash className="w-4 h-4" />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            <div className="flex-1 ml-2 flex items-baseline gap-2">
+                                                <span className="text-xl font-black text-white">{card.rank}</span>
+                                                {card.suit !== 'None' && (
+                                                   <span className="text-sm font-medium text-emerald-100/60">{card.suit}</span>
+                                                )}
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <span className="text-base font-mono font-bold text-emerald-400">+{calculateCardScore(card, settings)}</span>
+                                                <div className="flex gap-1">
+                                                    <button onClick={() => setEditingCardId(card.id)} className="p-1 text-slate-500 hover:text-white">
+                                                        <IconPencil className="w-4 h-4" />
+                                                    </button>
+                                                    <button onClick={() => deleteActiveRoundCard(card.id)} className="p-1 text-slate-500 hover:text-red-400">
+                                                        <IconTrash className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                </li>
+                            ))}
+                        </ul>
+                        <div className="pt-3 mt-2">
+                            <Button variant="ghost" fullWidth onClick={addActiveRoundCard} className="border-2 border-dashed border-slate-700 hover:border-slate-600 py-2 text-sm">
+                                <IconPlus className="w-4 h-4 mr-2" /> Add Card
+                            </Button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
-                <div className="p-4 overflow-y-auto custom-scrollbar flex-1">
-                    {activeRound.type === 'manual' ? (
-                        <div className="text-center py-12 flex flex-col items-center justify-center h-full">
-                             <div className="bg-slate-900/50 rounded-full w-24 h-24 flex items-center justify-center mx-auto mb-6">
-                                <IconPlus className="w-10 h-10 text-slate-500" />
-                             </div>
-                             <p className="text-slate-400 mb-2">Manual Entry</p>
-                             <p className="text-6xl font-bold text-emerald-400">{activeRound.score}</p>
-                             <p className="text-sm text-slate-500 mt-2">Points added manually</p>
-                        </div>
-                    ) : (
-                        <div>
-                             <ul className="space-y-2">
-                                {activeRound.cards.map((card) => (
-                                    <li key={card.id} className="flex justify-between items-center text-slate-200 border-b border-slate-700/30 last:border-0 pb-3 last:pb-0">
-                                        <span className="text-base">{card.rank} of {card.suit}</span>
-                                        <span className="text-base font-mono text-emerald-400">+{calculateCardScore(card, settings)}</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
+            {/* Footer */}
+            <div className="p-4 border-t border-slate-800 bg-slate-900/30 shrink-0 space-y-4">
+                    {activeRound.type === 'scan' && (
+                    <div className="flex justify-between items-center px-2">
+                        <span className="text-slate-400 font-semibold uppercase text-sm">Round Total</span>
+                        <span className="text-2xl font-bold text-white">{calculateRoundScore(activeRound, settings)}</span>
+                    </div>
                     )}
-                </div>
-
-                <div className="p-4 border-t border-slate-700 bg-slate-900/30 shrink-0">
-                     {activeRound.type === 'scan' && (
-                        <div className="flex justify-between items-center mb-4 px-2">
-                            <span className="text-slate-400 font-semibold uppercase text-sm">Total</span>
-                            <span className="text-2xl font-bold text-white">{calculateRoundScore(activeRound, settings)}</span>
-                        </div>
-                     )}
+                {activeRound.type === 'manual' ? (
+                    <Button 
+                        fullWidth
+                        variant="secondary" 
+                        onClick={() => {
+                            if (activeRoundPlayerId && activeRound) {
+                                setManualEntryPlayerId(activeRoundPlayerId);
+                                setManualEntryRoundId(activeRound.id);
+                                setManualScore(calculateRoundScore(activeRound, settings).toString());
+                                setActiveRound(null);
+                            }
+                        }}
+                    >
+                        Edit Score
+                    </Button>
+                ) : (
                     <div className="grid grid-cols-2 gap-3">
                         <Button 
                             variant="soft"
@@ -300,23 +410,16 @@ export const GameView: React.FC<GameViewProps> = ({
                             }}
                         >
                             <IconCamera className="w-4 h-4 mr-2" />
-                            Scan Hand
+                            Rescan
                         </Button>
                         <Button 
-                            variant="secondary" 
-                            onClick={() => {
-                                if (activeRoundPlayerId && activeRound) {
-                                    setManualEntryPlayerId(activeRoundPlayerId);
-                                    setManualEntryRoundId(activeRound.id);
-                                    setManualScore(calculateRoundScore(activeRound, settings).toString());
-                                    setActiveRound(null);
-                                }
-                            }}
+                            variant="primary" 
+                            onClick={handleSaveChanges}
                         >
-                            Edit Score
+                            Save Changes
                         </Button>
                     </div>
-                </div>
+                )}
             </div>
         </div>
       )}
