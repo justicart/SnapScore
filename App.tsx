@@ -8,6 +8,7 @@ import { ScanView } from './views/ScanView';
 import { MultiplayerModal } from './components/MultiplayerModal';
 import { Button } from './components/Button';
 import { p2p } from './services/p2pService';
+import { IconX } from './components/Icons';
 import { v4 as uuidv4 } from 'uuid';
 
 const DEFAULT_SETTINGS: CardSettings = {
@@ -41,6 +42,7 @@ const App: React.FC = () => {
   const [isClient, setIsClient] = useState(() => !!localStorage.getItem('snapscore_host_id'));
   const [isJoining, setIsJoining] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [hostEndedSession, setHostEndedSession] = useState(false);
   
   // Refs
   const joinCancelledRef = useRef(false);
@@ -100,6 +102,7 @@ const App: React.FC = () => {
             localStorage.removeItem('snapscore_host_id');
             setIsClient(false);
             setRetryCount(0);
+            setHostEndedSession(false);
             window.history.replaceState({}, document.title, window.location.pathname);
             handleJoinGame(joinId);
         } else if (storedHostId) {
@@ -135,7 +138,8 @@ const App: React.FC = () => {
   // --- Auto-Reconnect Effect ---
   useEffect(() => {
     // If we think we are a client, but we have no connections, try to reconnect
-    if (!isClient) return;
+    // UNLESS the host explicitly ended the game
+    if (!isClient || hostEndedSession) return;
 
     // Check if connections are truly 0 (using P2P service directly to avoid state lag)
     if (connectedPeers === 0) {
@@ -159,7 +163,7 @@ const App: React.FC = () => {
         return () => clearTimeout(timer);
       }
     }
-  }, [isClient, connectedPeers, isJoining, retryCount]);
+  }, [isClient, connectedPeers, isJoining, retryCount, hostEndedSession]);
 
   // --- Sync Logic ---
   useEffect(() => {
@@ -182,6 +186,7 @@ const App: React.FC = () => {
   const handleP2PMessage = (msg: P2PMessage) => {
       if (msg.type === 'SYNC_STATE') {
           setIsClient(true);
+          setHostEndedSession(false); // Clear any previous disconnect messages
           setPlayers(msg.payload.players);
           setSettings(msg.payload.settings);
           if (msg.payload.view === AppView.GAME || msg.payload.view === AppView.SETUP) {
@@ -195,6 +200,13 @@ const App: React.FC = () => {
           setSettings(msg.payload);
       } else if (msg.type === 'REQUEST_ADD_PLAYERS') {
           setPlayers(prev => [...prev, ...msg.payload]);
+      } else if (msg.type === 'GAME_ENDED') {
+          // Host explicitly ended the session
+          setHostEndedSession(true);
+          setIsClient(false);
+          localStorage.removeItem('snapscore_host_id');
+          setRetryCount(0);
+          setView(AppView.SETUP);
       }
   };
 
@@ -217,6 +229,7 @@ const App: React.FC = () => {
 
           // Connection success
           setIsClient(true);
+          setHostEndedSession(false);
           localStorage.setItem('snapscore_host_id', targetHostId);
           setRetryCount(0); // Reset retries on success
           
@@ -366,23 +379,30 @@ const App: React.FC = () => {
     }));
   };
 
-  const handleResetGame = () => {
+  const handleResetGame = async () => {
     if (isClient) {
         p2p.sendToHost({ type: 'REQUEST_RESET', payload: null });
         return;
     }
     // Host Logic: New Game -> New ID
-    setPlayers([]);
-    localStorage.removeItem('snapscore_players');
     
-    localStorage.removeItem('snapscore_device_id');
-    p2p.destroy();
-    
-    p2p.init().then(id => {
-        setPeerId(id);
-    });
-    
-    setView(AppView.SETUP);
+    // 1. Broadcast to clients that game is ending so they don't retry
+    p2p.broadcast({ type: 'GAME_ENDED', payload: null });
+
+    // 2. Wait briefly to ensure message sends, then cleanup
+    setTimeout(() => {
+        setPlayers([]);
+        localStorage.removeItem('snapscore_players');
+        localStorage.removeItem('snapscore_device_id');
+        
+        p2p.destroy();
+        
+        p2p.init().then(id => {
+            setPeerId(id);
+        });
+        
+        setView(AppView.SETUP);
+    }, 500);
   };
 
   const handleUpdateSettings = (newSettings: CardSettings) => {
@@ -415,7 +435,7 @@ const App: React.FC = () => {
     setView(AppView.GAME);
   }
 
-  const showLoading = isJoining || (isClient && connectedPeers === 0);
+  const showLoading = isJoining || (isClient && connectedPeers === 0 && !hostEndedSession);
 
   if (showLoading) {
       return (
@@ -451,6 +471,15 @@ const App: React.FC = () => {
 
   return (
     <div className="max-w-md mx-auto h-[100dvh] bg-felt-900 flex flex-col shadow-2xl relative overflow-hidden">
+      {hostEndedSession && (
+          <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-center p-3 z-50 flex justify-between items-center shadow-lg animate-slide-down">
+              <span className="text-sm font-bold ml-2">Host has ended the game.</span>
+              <button onClick={() => setHostEndedSession(false)} className="p-1 hover:bg-red-600 rounded-full">
+                  <IconX className="w-5 h-5" />
+              </button>
+          </div>
+      )}
+
       {isMultiplayerOpen && (
           <MultiplayerModal 
             hostId={peerId} 
