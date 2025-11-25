@@ -12,8 +12,10 @@ export class P2PService {
   private onMessageCallback: ((msg: P2PMessage) => void) | null = null;
   private onConnectionChangeCallback: (() => void) | null = null;
   private hostId: string | null = null;
+  private heartbeatInterval: NodeJS.Timeout | null = null;
 
   constructor() {
+      this.startHeartbeat();
   }
 
   init(preferredId?: string): Promise<string> {
@@ -117,9 +119,17 @@ export class P2PService {
     // Cleanup existing connection to same host to prevent duplicates/zombies
     const existingConn = this.connections.find(c => c.peer === hostId);
     if (existingConn) {
-        console.log("Closing existing stale connection to host:", hostId);
-        existingConn.close();
-        this.connections = this.connections.filter(c => c !== existingConn);
+        // Only close if it's actually in a bad state, otherwise reusing it might be better?
+        // But PeerJS connections are tricky. Safer to recreate if we are explicitly asked to connect.
+        if (!existingConn.open) {
+            console.log("Closing stale connection to host:", hostId);
+            existingConn.close();
+            this.connections = this.connections.filter(c => c !== existingConn);
+        } else {
+             console.log("Already connected to host:", hostId);
+             resolve();
+             return;
+        }
     }
 
     // Set a timeout for the connection attempt
@@ -128,7 +138,9 @@ export class P2PService {
         reject(new Error("Connection timed out"));
     }, 10000);
 
-    const conn = this.peer.connect(hostId);
+    const conn = this.peer.connect(hostId, {
+        serialization: 'json'
+    });
 
     const cleanup = () => {
         conn.off('open', onOpen);
@@ -156,8 +168,7 @@ export class P2PService {
         // Connection closed during handshake
     };
 
-    // Critical: Listen for 'peer-unavailable' on the PEER instance, 
-    // because sometimes it doesn't fire on the connection object depending on PeerJS version/browser.
+    // Critical: Listen for 'peer-unavailable' on the PEER instance
     const onPeerError = (err: any) => {
         if (err.type === 'peer-unavailable' && String(err.message).includes(hostId)) {
             clearTimeout(timeout);
@@ -179,20 +190,43 @@ export class P2PService {
         this.notifyConnectionChange();
 
         conn.on('data', (data: any) => {
+            const msg = data as P2PMessage;
+            
+            // Handle Heartbeat internally
+            if (msg.type === 'HEARTBEAT') {
+                return;
+            }
+
             if (this.onMessageCallback) {
-                this.onMessageCallback(data as P2PMessage);
+                this.onMessageCallback(msg);
             }
         });
 
         conn.on('close', () => {
             this.connections = this.connections.filter(c => c !== conn);
-            console.log('Connection closed');
+            console.log('Connection closed:', conn.peer);
             this.notifyConnectionChange();
         });
         
+        conn.on('error', (err) => {
+            console.error("Connection level error:", err);
+            // PeerJS usually fires 'close' after error, but we'll ensure cleanup
+            if (!conn.open) {
+                this.connections = this.connections.filter(c => c !== conn);
+                this.notifyConnectionChange();
+            }
+        });
+
         // Ensure we notify again in case listener was attached late
         this.notifyConnectionChange();
     }
+  }
+
+  private startHeartbeat() {
+      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+      this.heartbeatInterval = setInterval(() => {
+          this.broadcast({ type: 'HEARTBEAT', payload: Date.now() });
+      }, 2000); // Send heartbeat every 2 seconds
   }
 
   onMessage(callback: (msg: P2PMessage) => void) {
@@ -212,7 +246,11 @@ export class P2PService {
   broadcast(msg: P2PMessage) {
     this.connections.forEach(conn => {
       if (conn.open) {
-        conn.send(msg);
+        try {
+            conn.send(msg);
+        } catch (e) {
+            console.warn("Failed to send to peer:", conn.peer, e);
+        }
       }
     });
   }
@@ -237,6 +275,7 @@ export class P2PService {
   }
 
   destroy() {
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
     this.connections.forEach(c => c.close());
     if (this.peer) {
         this.peer.removeAllListeners();

@@ -73,6 +73,7 @@ const App: React.FC = () => {
         }
         
         p2p.onMessage((msg) => {
+          if (msg.type === 'HEARTBEAT') return; // Should be filtered by service, but safety check
           handleP2PMessage(msg);
         });
         
@@ -92,7 +93,7 @@ const App: React.FC = () => {
              if (JSON.stringify(ids) !== JSON.stringify(connectedPeerIds)) {
                  setConnectedPeerIds(ids);
              }
-        }, 5000);
+        }, 3000);
 
         if (joinId) {
             // If joining via URL, clear previous session state to prevent fallback loop
@@ -136,6 +137,7 @@ const App: React.FC = () => {
     // If we think we are a client, but we have no connections, try to reconnect
     if (!isClient) return;
 
+    // Check if connections are truly 0 (using P2P service directly to avoid state lag)
     if (connectedPeers === 0) {
       const hostId = localStorage.getItem('snapscore_host_id');
       if (hostId) {
@@ -148,11 +150,12 @@ const App: React.FC = () => {
 
         // Debounce reconnection attempts
         const timer = setTimeout(() => {
-            if (!isJoining && connectedPeers === 0) {
+            // Critical check: Ensure we aren't already joining OR already connected (via direct service check)
+            if (!isJoining && p2p.activeConnectionsCount === 0) {
                 console.log(`Connection lost. Attempting to reconnect to host: ${hostId} (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
                 handleJoinGame(hostId, true);
             }
-        }, 2000);
+        }, 3000); // Increased delay to absorb quick flicker
         return () => clearTimeout(timer);
       }
     }
@@ -196,6 +199,15 @@ const App: React.FC = () => {
   };
 
   const handleJoinGame = async (targetHostId: string, silent = false) => {
+      // If we are already connected to this host, don't try again
+      if (p2p.connectedPeerIds.includes(targetHostId)) {
+          console.log("Already connected to", targetHostId);
+          setIsJoining(false);
+          setRetryCount(0);
+          setIsClient(true);
+          return;
+      }
+
       joinCancelledRef.current = false;
       setIsJoining(true);
       try {
