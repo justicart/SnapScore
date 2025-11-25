@@ -1,11 +1,12 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Player, AppView, CardSettings, Round, P2PMessage } from './types';
 import { SetupView } from './views/SetupView';
 import { GameView } from './views/GameView';
 import { SettingsView } from './views/SettingsView';
 import { ScanView } from './views/ScanView';
 import { MultiplayerModal } from './components/MultiplayerModal';
+import { Button } from './components/Button';
 import { p2p } from './services/p2pService';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -34,6 +35,7 @@ const App: React.FC = () => {
   const [connectedPeers, setConnectedPeers] = useState<number>(0);
   const [isClient, setIsClient] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  const joinCancelledRef = useRef(false);
   
   // Force sync effect on connection events
   const [p2pUpdateTick, setP2pUpdateTick] = useState(0);
@@ -128,19 +130,31 @@ const App: React.FC = () => {
   };
 
   const handleJoinGame = async (targetHostId: string, silent = false) => {
+      joinCancelledRef.current = false;
       setIsJoining(true);
       try {
           await p2p.connect(targetHostId);
+          if (joinCancelledRef.current) return;
+
           setIsClient(true);
           localStorage.setItem('snapscore_host_id', targetHostId);
           setIsMultiplayerOpen(false);
       } catch (e) {
+          if (joinCancelledRef.current) return;
           console.error("Join Game Error:", e);
           if (!silent) alert("Could not connect to host.");
           // Do not remove localStorage item here to allow retries on refresh
       } finally {
-          setIsJoining(false);
+          if (!joinCancelledRef.current) {
+              setIsJoining(false);
+          }
       }
+  };
+
+  const handleCancelJoin = () => {
+      joinCancelledRef.current = true;
+      setIsJoining(false);
+      localStorage.removeItem('snapscore_host_id');
   };
 
   const handleLeaveGame = () => {
@@ -294,6 +308,9 @@ const App: React.FC = () => {
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
               <h2 className="text-xl font-bold text-white animate-pulse">Joining Game...</h2>
               <p className="text-sm text-slate-400 mt-2">Connecting to host...</p>
+              <Button variant="secondary" onClick={handleCancelJoin} className="mt-8 border border-slate-700">
+                  Cancel
+              </Button>
           </div>
       );
   }
@@ -357,3 +374,4 @@ const App: React.FC = () => {
 };
 
 export default App;
+    
