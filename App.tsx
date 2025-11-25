@@ -52,12 +52,21 @@ const App: React.FC = () => {
       try {
         // Try to restore previous session ID to allow refresh-reconnect
         const storedDeviceId = localStorage.getItem('snapscore_device_id');
+        const storedHostId = localStorage.getItem('snapscore_host_id');
+        const params = new URLSearchParams(window.location.search);
+        const joinId = params.get('join');
         
+        // Only use stored ID if we are actually recovering a session or joining
         const id = await p2p.init(storedDeviceId || undefined);
         setPeerId(id);
         
-        // Save the confirmed ID
-        localStorage.setItem('snapscore_device_id', id);
+        // Only persist ID if:
+        // 1. We already had one (recovering session)
+        // 2. We are a client (storedHostId exists)
+        // 3. We are joining a game via URL
+        if (storedDeviceId || storedHostId || joinId) {
+            localStorage.setItem('snapscore_device_id', id);
+        }
         
         p2p.onMessage((msg) => {
           handleP2PMessage(msg);
@@ -75,10 +84,6 @@ const App: React.FC = () => {
                  setConnectedPeers(count);
              }
         }, 5000);
-
-        const params = new URLSearchParams(window.location.search);
-        const joinId = params.get('join');
-        const storedHostId = localStorage.getItem('snapscore_host_id');
 
         if (joinId) {
             window.history.replaceState({}, document.title, window.location.pathname);
@@ -100,6 +105,15 @@ const App: React.FC = () => {
       p2p.destroy();
     };
   }, []);
+
+  // --- Persist ID when game is active or peers connected ---
+  useEffect(() => {
+    if (connectedPeers > 0 && peerId) {
+        // If we have active connections (Host with peers OR Client connected to Host),
+        // we must persist our ID to survive refreshes.
+        localStorage.setItem('snapscore_device_id', peerId);
+    }
+  }, [connectedPeers, peerId]);
 
   // --- Auto-Reconnect Effect ---
   useEffect(() => {
@@ -170,6 +184,13 @@ const App: React.FC = () => {
 
           setIsClient(true);
           localStorage.setItem('snapscore_host_id', targetHostId);
+          
+          // Ensure our ID is persisted so we can reconnect if we refresh
+          const myId = p2p.getMyId();
+          if (myId) {
+              localStorage.setItem('snapscore_device_id', myId);
+          }
+          
           setIsMultiplayerOpen(false);
       } catch (e) {
           if (joinCancelledRef.current) return;
@@ -192,6 +213,8 @@ const App: React.FC = () => {
 
   const handleLeaveGame = () => {
       localStorage.removeItem('snapscore_host_id');
+      // Optional: if client leaves, maybe clear device ID too? 
+      // For now we leave it to avoid ID churn if they rejoin immediately.
       window.location.reload();
   };
 
@@ -257,6 +280,10 @@ const App: React.FC = () => {
     // Host merges new players with existing ones
     setPlayers(prev => [...prev, ...newPlayers]);
     setView(AppView.GAME);
+
+    // We are committing to a session (Game Started), so persist the ID to survive refreshes.
+    // This ensures the Host ID stays stable even if no one has connected yet.
+    if (peerId) localStorage.setItem('snapscore_device_id', peerId);
   };
 
   const handleUpdatePlayers = (newPlayers: Player[]) => {
