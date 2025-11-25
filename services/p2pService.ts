@@ -122,14 +122,24 @@ export class P2PService {
         this.connections = this.connections.filter(c => c !== existingConn);
     }
 
+    // Set a timeout for the connection attempt
     const timeout = setTimeout(() => {
+        cleanup();
         reject(new Error("Connection timed out"));
     }, 10000);
 
     const conn = this.peer.connect(hostId);
 
+    const cleanup = () => {
+        conn.off('open', onOpen);
+        conn.off('error', onError);
+        conn.off('close', onClose);
+        this.peer?.off('error', onPeerError);
+    };
+
     const onOpen = () => {
       clearTimeout(timeout);
+      cleanup();
       console.log('Connected to host:', hostId);
       this.setupConnection(conn);
       resolve();
@@ -137,19 +147,30 @@ export class P2PService {
 
     const onError = (err: any) => {
       clearTimeout(timeout);
+      cleanup();
       console.error('Connection error:', err);
       reject(err);
     };
     
     const onClose = () => {
-        // If it closes during handshake
-        // We don't reject here because onError usually fires first, 
-        // but if it just closes silently, the timeout will catch it.
+        // Connection closed during handshake
+    };
+
+    // Critical: Listen for 'peer-unavailable' on the PEER instance, 
+    // because sometimes it doesn't fire on the connection object depending on PeerJS version/browser.
+    const onPeerError = (err: any) => {
+        if (err.type === 'peer-unavailable' && String(err.message).includes(hostId)) {
+            clearTimeout(timeout);
+            cleanup();
+            console.warn(`Host ${hostId} unavailable (Fast Fail)`);
+            reject(err);
+        }
     };
 
     conn.on('open', onOpen);
     conn.on('error', onError);
     conn.on('close', onClose);
+    this.peer.on('error', onPeerError);
   }
 
   private setupConnection(conn: DataConnection) {
@@ -209,6 +230,10 @@ export class P2PService {
   get activeConnectionsCount() {
       // We only add to this.connections when 'open' fires, so length is reliable
       return this.connections.length;
+  }
+
+  get connectedPeerIds() {
+      return this.connections.map(c => c.peer);
   }
 
   destroy() {

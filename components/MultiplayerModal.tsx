@@ -9,14 +9,14 @@ interface MultiplayerModalProps {
   hostId: string; // The current device's Peer ID
   onJoin: (targetHostId: string) => void;
   onClose: () => void;
-  connectedPeersCount: number;
+  connectedPeers: string[]; // List of connected client IDs
 }
 
 export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({ 
   hostId, 
   onJoin, 
   onClose,
-  connectedPeersCount
+  connectedPeers
 }) => {
   const [mode, setMode] = useState<'HOST' | 'JOIN'>('HOST');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
@@ -158,10 +158,22 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                 
                 <div className="bg-slate-800/50 rounded-lg p-4">
                     <p className="text-slate-400 mb-2 text-sm">Friends can scan this code to join.</p>
-                    {connectedPeersCount > 0 ? (
-                        <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-full text-sm font-bold animate-pulse">
-                        <IconCheck className="w-4 h-4" />
-                        {connectedPeersCount} Connected
+                    {connectedPeers.length > 0 ? (
+                        <div className="w-full">
+                            <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-full text-sm font-bold animate-pulse mb-4">
+                            <IconCheck className="w-4 h-4" />
+                            {connectedPeers.length} Connected
+                            </div>
+                            <div className="bg-slate-900/50 rounded-lg p-3 w-full max-h-32 overflow-y-auto text-left border border-slate-800">
+                                <p className="text-[10px] uppercase text-slate-500 font-bold mb-2 sticky top-0 bg-slate-900/90 backdrop-blur pb-1">Client IDs</p>
+                                <ul className="space-y-1">
+                                    {connectedPeers.map(id => (
+                                        <li key={id} className="text-xs font-mono text-slate-400 truncate select-all border-b border-slate-800/50 last:border-0 pb-1 last:pb-0">
+                                            {id}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
                     ) : (
                         <p className="text-xs text-slate-500 italic">Waiting for players...</p>

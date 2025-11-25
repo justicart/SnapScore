@@ -20,6 +20,8 @@ const DEFAULT_SETTINGS: CardSettings = {
   winningScoreType: 'lowest'
 };
 
+const MAX_RETRIES = 5;
+
 const App: React.FC = () => {
   const [view, setView] = useState<AppView>(AppView.SETUP);
   const [players, setPlayers] = useState<Player[]>([]);
@@ -33,10 +35,12 @@ const App: React.FC = () => {
   const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
   const [peerId, setPeerId] = useState<string>('');
   const [connectedPeers, setConnectedPeers] = useState<number>(0);
+  const [connectedPeerIds, setConnectedPeerIds] = useState<string[]>([]);
   
   // Initialize isClient based on localStorage to support refresh/reconnect
   const [isClient, setIsClient] = useState(() => !!localStorage.getItem('snapscore_host_id'));
   const [isJoining, setIsJoining] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   
   // Refs
   const joinCancelledRef = useRef(false);
@@ -74,14 +78,19 @@ const App: React.FC = () => {
         
         p2p.onConnectionChange(() => {
             setConnectedPeers(p2p.activeConnectionsCount);
+            setConnectedPeerIds(p2p.connectedPeerIds);
             setP2pUpdateTick(t => t + 1);
         });
 
         // Backup polling interval
         intervalId = setInterval(() => {
              const count = p2p.activeConnectionsCount;
+             const ids = p2p.connectedPeerIds;
              if (count !== connectedPeers) {
                  setConnectedPeers(count);
+             }
+             if (JSON.stringify(ids) !== JSON.stringify(connectedPeerIds)) {
+                 setConnectedPeerIds(ids);
              }
         }, 5000);
 
@@ -89,6 +98,7 @@ const App: React.FC = () => {
             // If joining via URL, clear previous session state to prevent fallback loop
             localStorage.removeItem('snapscore_host_id');
             setIsClient(false);
+            setRetryCount(0);
             window.history.replaceState({}, document.title, window.location.pathname);
             handleJoinGame(joinId);
         } else if (storedHostId) {
@@ -129,17 +139,24 @@ const App: React.FC = () => {
     if (connectedPeers === 0) {
       const hostId = localStorage.getItem('snapscore_host_id');
       if (hostId) {
+        if (retryCount >= MAX_RETRIES) {
+            console.warn("Max retries reached. Stopping auto-reconnect.");
+            setIsClient(false);
+            localStorage.removeItem('snapscore_host_id');
+            return;
+        }
+
         // Debounce reconnection attempts
         const timer = setTimeout(() => {
             if (!isJoining && connectedPeers === 0) {
-                console.log("Connection lost. Attempting to reconnect to host:", hostId);
+                console.log(`Connection lost. Attempting to reconnect to host: ${hostId} (Attempt ${retryCount + 1}/${MAX_RETRIES})`);
                 handleJoinGame(hostId, true);
             }
         }, 2000);
         return () => clearTimeout(timer);
       }
     }
-  }, [isClient, connectedPeers, isJoining]);
+  }, [isClient, connectedPeers, isJoining, retryCount]);
 
   // --- Sync Logic ---
   useEffect(() => {
@@ -189,6 +206,7 @@ const App: React.FC = () => {
           // Connection success
           setIsClient(true);
           localStorage.setItem('snapscore_host_id', targetHostId);
+          setRetryCount(0); // Reset retries on success
           
           const myId = p2p.getMyId();
           if (myId) {
@@ -196,17 +214,28 @@ const App: React.FC = () => {
           }
           
           setIsMultiplayerOpen(false);
-      } catch (e) {
+      } catch (e: any) {
           if (joinCancelledRef.current) return;
           console.error("Join Game Error:", e);
           
+          // Fail Fast: If peer ID is invalid, stop retrying immediately
+          if (e?.type === 'peer-unavailable' || String(e).includes('Could not connect to peer')) {
+               if (!silent) alert("Could not find host. The QR code might be old.");
+               setIsClient(false);
+               localStorage.removeItem('snapscore_host_id');
+               setRetryCount(0);
+               setIsJoining(false);
+               return;
+          }
+          
           if (!silent) {
               alert("Could not connect to host. Please try again.");
-              // If manual join fails, ensure we don't get stuck in isClient mode
               setIsClient(false);
               localStorage.removeItem('snapscore_host_id');
+          } else {
+              // Increment retry count if silent failure
+              setRetryCount(prev => prev + 1);
           }
-          // If silent (auto-reconnect), we leave isClient=true to allow further retries
       } finally {
           if (!joinCancelledRef.current) {
               setIsJoining(false);
@@ -219,6 +248,7 @@ const App: React.FC = () => {
       setIsJoining(false);
       localStorage.removeItem('snapscore_host_id');
       setIsClient(false);
+      setRetryCount(0);
   };
 
   const handleLeaveGame = () => {
@@ -385,9 +415,21 @@ const App: React.FC = () => {
               <p className="text-sm text-slate-400 mt-2 text-center max-w-[250px]">
                 {isJoining 
                   ? "Connecting to host..." 
-                  : "Lost connection to host. Retrying..."
+                  : `Lost connection. Retrying (${retryCount}/${MAX_RETRIES})...`
                 }
               </p>
+              
+              <div className="mt-6 p-4 bg-slate-800/30 rounded-lg text-center border border-slate-700/30 w-full max-w-xs">
+                   <p className="text-xs text-slate-500 font-mono mb-2">
+                       <span className="block uppercase text-[10px] tracking-wider text-slate-600 font-bold">My Device ID</span>
+                       <span className="text-slate-300 select-all">{localStorage.getItem('snapscore_device_id') || peerId || 'Generating...'}</span>
+                   </p>
+                   <p className="text-xs text-slate-500 font-mono">
+                       <span className="block uppercase text-[10px] tracking-wider text-slate-600 font-bold">Connecting To Host</span>
+                       <span className="text-slate-300 select-all">{localStorage.getItem('snapscore_host_id') || 'Unknown'}</span>
+                   </p>
+              </div>
+
               <Button variant="secondary" onClick={handleCancelJoin} className="mt-8 border border-slate-700 bg-slate-800/50 text-slate-300 hover:text-white">
                   Cancel
               </Button>
@@ -402,7 +444,7 @@ const App: React.FC = () => {
             hostId={peerId} 
             onClose={() => setIsMultiplayerOpen(false)}
             onJoin={(id) => handleJoinGame(id)}
-            connectedPeersCount={connectedPeers}
+            connectedPeers={connectedPeerIds}
           />
       )}
 
