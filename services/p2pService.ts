@@ -45,7 +45,7 @@ export class P2PService {
           peer.on('error', (err) => {
              const errStr = String(err);
              
-             // Handle ID taken -> retry with new ID
+             // Handle ID taken -> retry with new ID (fallback)
              if (err.type === 'unavailable-id') {
                  console.warn(`Peer ID ${idToUse} unavailable, regenerating...`);
                  peer.destroy();
@@ -53,15 +53,16 @@ export class P2PService {
                  return;
              }
 
-             // Suppress common connection loss errors
+             // Suppress common connection loss errors which are often non-fatal during reloads
              if (
                 err.type === 'network' || 
+                err.type === 'peer-unavailable' ||
                 err.type === 'server-error' || 
                 errStr.includes("Lost connection") ||
                 errStr.includes("Could not connect to peer")
              ) {
                  if (this.hostId && !peer.destroyed) {
-                     // Non-fatal, just log warning
+                     console.warn("PeerJS non-fatal error:", err);
                      return; 
                  }
              }
@@ -70,7 +71,7 @@ export class P2PService {
              if (!this.hostId) {
                 reject(err);
              } else {
-                 console.error('PeerJS error:', err);
+                 console.error('PeerJS fatal error:', err);
              }
           });
       };
@@ -119,7 +120,7 @@ export class P2PService {
         console.log("Closing existing stale connection to host:", hostId);
         existingConn.close();
         this.connections = this.connections.filter(c => c !== existingConn);
-        this.notifyConnectionChange();
+        // We don't notify immediately, let the new connection logic handle state
     }
 
     // Set a timeout for connection
@@ -142,7 +143,7 @@ export class P2PService {
       reject(err);
     };
     
-    // Also handle immediate close
+    // Also handle immediate close during handshake
     const onClose = () => {
         clearTimeout(timeout);
     };

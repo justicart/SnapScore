@@ -64,7 +64,8 @@ const App: React.FC = () => {
         // 1. We already had one (recovering session)
         // 2. We are a client (storedHostId exists)
         // 3. We are joining a game via URL
-        if (storedDeviceId || storedHostId || joinId) {
+        // 4. NOTE: If storedDeviceId was invalid/taken, p2p.init returned a NEW id. Update storage.
+        if ((storedDeviceId || storedHostId || joinId) && storedDeviceId !== id) {
             localStorage.setItem('snapscore_device_id', id);
         }
         
@@ -100,8 +101,15 @@ const App: React.FC = () => {
     };
     initP2p();
 
+    // Cleanup on unload to help PeerJS server release ID faster
+    const handleUnload = () => {
+        p2p.destroy();
+    };
+    window.addEventListener('beforeunload', handleUnload);
+
     return () => {
       if (intervalId) clearInterval(intervalId);
+      window.removeEventListener('beforeunload', handleUnload);
       p2p.destroy();
     };
   }, []);
@@ -195,7 +203,7 @@ const App: React.FC = () => {
       } catch (e) {
           if (joinCancelledRef.current) return;
           console.error("Join Game Error:", e);
-          if (!silent) alert("Could not connect to host.");
+          if (!silent) alert("Could not connect to host. Please try again.");
           // Do not remove localStorage item here to allow retries on refresh/reconnect
       } finally {
           if (!joinCancelledRef.current) {
@@ -213,8 +221,6 @@ const App: React.FC = () => {
 
   const handleLeaveGame = () => {
       localStorage.removeItem('snapscore_host_id');
-      // Optional: if client leaves, maybe clear device ID too? 
-      // For now we leave it to avoid ID churn if they rejoin immediately.
       window.location.reload();
   };
 
@@ -327,8 +333,19 @@ const App: React.FC = () => {
         p2p.sendToHost({ type: 'REQUEST_RESET', payload: null });
         return;
     }
+    // Host Logic: New Game -> New ID
     setPlayers([]);
     localStorage.removeItem('snapscore_players');
+    
+    // Explicitly destroy old session and generate new ID
+    localStorage.removeItem('snapscore_device_id');
+    p2p.destroy();
+    
+    p2p.init().then(id => {
+        setPeerId(id);
+        // Do NOT save snapscore_device_id yet; waiting for Start Game or Connection
+    });
+    
     setView(AppView.SETUP);
   };
 
@@ -370,12 +387,15 @@ const App: React.FC = () => {
           <div className="h-[100dvh] bg-felt-900 flex flex-col items-center justify-center p-6">
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
               <h2 className="text-xl font-bold text-white animate-pulse">
-                {isJoining && connectedPeers === 0 ? "Joining Game..." : "Reconnecting..."}
+                {isJoining ? "Joining Game..." : "Reconnecting..."}
               </h2>
-              <p className="text-sm text-slate-400 mt-2">
-                {isJoining && connectedPeers === 0 ? "Connecting to host..." : "Lost connection to host. Retrying..."}
+              <p className="text-sm text-slate-400 mt-2 text-center max-w-[250px]">
+                {isJoining 
+                  ? "Connecting to host..." 
+                  : "Lost connection to host. Retrying..."
+                }
               </p>
-              <Button variant="secondary" onClick={handleCancelJoin} className="mt-8 border border-slate-700">
+              <Button variant="secondary" onClick={handleCancelJoin} className="mt-8 border border-slate-700 bg-slate-800/50 text-slate-300 hover:text-white">
                   Cancel
               </Button>
           </div>
