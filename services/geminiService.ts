@@ -3,19 +3,23 @@ import { GoogleGenAI, Type, Schema } from "@google/genai";
 import { ScanResult } from "../types";
 
 const SYSTEM_PROMPT = `
-    You are an expert card game assistant. Your job is to identify playing cards in an image.
-    
+    You are an expert card game assistant. Your task is to accurately identify and list every playing card visible in the provided image.
+
+    STRATEGY:
+    1. Scan the image methodically (e.g., from top-left to bottom-right).
+    2. Pay close attention to **overlapping cards** or "fanned" hands. Look for visible indices (numbers/letters and suit symbols) in the corners even if the rest of the card is hidden.
+    3. Count the cards you see to ensure you don't miss any in a sequence.
+    4. If a card is partially obscured but identifiable, include it.
+
     INSTRUCTIONS:
-    1. Identify every card visible in the image.
-    2. If a card is partially obscured but identifiable, include it.
-    3. **CRITICAL**: Identify specific Jokers. 
+    1. Return the Rank and Suit for each card.
+    2. **CRITICAL**: Identify specific Jokers. 
        - Cards with '$' or 'S' in the corner are Jokers.
        - Cards explicitly labeled JOKER are Jokers.
-    4. Return the Rank and Suit for each card.
     
     FORMAT:
     - Rank: Use '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', or 'Joker'.
-    - Suit: Use 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars'. For Jokers, use 'None'.
+    - Suit: Use 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'.
 `;
 
 const responseSchema: Schema = {
@@ -103,7 +107,10 @@ export const analyzeHand = async (base64Image: string): Promise<ScanResult> => {
       config: {
         responseMimeType: "application/json",
         responseSchema: responseSchema,
-        temperature: 0.1
+        temperature: 0.1,
+        thinkingConfig: {
+          thinkingBudget: 2048 // Allocating token budget for better reasoning on dense images
+        }
       }
     });
 
