@@ -35,6 +35,8 @@ const App: React.FC = () => {
   const [connectedPeers, setConnectedPeers] = useState<number>(0);
   const [isClient, setIsClient] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
+  
+  // Refs
   const joinCancelledRef = useRef(false);
   
   // Force sync effect on connection events
@@ -46,8 +48,14 @@ const App: React.FC = () => {
 
     const initP2p = async () => {
       try {
-        const id = await p2p.init();
+        // Try to restore previous session ID to allow refresh-reconnect
+        const storedDeviceId = localStorage.getItem('snapscore_device_id');
+        
+        const id = await p2p.init(storedDeviceId || undefined);
         setPeerId(id);
+        
+        // Save the confirmed ID
+        localStorage.setItem('snapscore_device_id', id);
         
         p2p.onMessage((msg) => {
           handleP2PMessage(msg);
@@ -134,6 +142,8 @@ const App: React.FC = () => {
       setIsJoining(true);
       try {
           await p2p.connect(targetHostId);
+          
+          // Check if user cancelled while connecting
           if (joinCancelledRef.current) return;
 
           setIsClient(true);
@@ -374,4 +384,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-    

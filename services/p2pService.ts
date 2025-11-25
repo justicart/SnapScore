@@ -16,66 +16,84 @@ export class P2PService {
   constructor() {
   }
 
-  init(id?: string): Promise<string> {
+  init(preferredId?: string): Promise<string> {
     return new Promise((resolve, reject) => {
       if (this.peer && !this.peer.destroyed) {
         resolve(this.peer.id);
         return;
       }
 
-      this.peer = new Peer(id || generateShortId(), {
-        debug: 1,
-        config: {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:global.stun.twilio.com:3478' }
-            ]
+      const createPeer = (idToUse?: string) => {
+          const peer = new Peer(idToUse || generateShortId(), {
+            debug: 1,
+            config: {
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:global.stun.twilio.com:3478' }
+                ]
+            }
+          });
+
+          peer.on('open', (id) => {
+            console.log('My Peer ID is: ' + id);
+            this.hostId = id;
+            this.peer = peer;
+            this.attachRuntimeListeners(peer);
+            resolve(id);
+          });
+
+          peer.on('error', (err) => {
+             const errStr = String(err);
+             
+             // Handle ID taken -> retry with new ID
+             if (err.type === 'unavailable-id') {
+                 console.warn(`Peer ID ${idToUse} unavailable, regenerating...`);
+                 peer.destroy();
+                 createPeer(undefined); // Retry without specific ID
+                 return;
+             }
+
+             // Suppress common connection loss errors
+             if (
+                err.type === 'network' || 
+                err.type === 'server-error' || 
+                errStr.includes("Lost connection") ||
+                errStr.includes("Could not connect to peer")
+             ) {
+                 if (this.hostId && !peer.destroyed) {
+                     // Non-fatal, just log warning
+                     return; 
+                 }
+             }
+             
+             // If we haven't resolved yet (initialization phase fatal error)
+             if (!this.hostId) {
+                reject(err);
+             } else {
+                 console.error('PeerJS error:', err);
+             }
+          });
+      };
+
+      createPeer(preferredId);
+    });
+  }
+
+  private attachRuntimeListeners(peer: Peer) {
+      peer.on('disconnected', () => {
+        if (peer && !peer.destroyed) {
+            // console.log('Peer disconnected from server, attempting reconnect...');
+            peer.reconnect();
         }
       });
 
-      this.peer.on('open', (id) => {
-        console.log('My Peer ID is: ' + id);
-        this.hostId = id;
-        resolve(id);
-      });
-
-      this.peer.on('disconnected', () => {
-        if (this.peer && !this.peer.destroyed) {
-            console.log('Peer disconnected from server, attempting reconnect...');
-            this.peer.reconnect();
-        }
-      });
-
-      this.peer.on('connection', (conn) => {
-        console.log('Incoming connection from', conn.peer);
-        // Wait for open to ensure we can send data immediately if needed
+      peer.on('connection', (conn) => {
+        // console.log('Incoming connection from', conn.peer);
         conn.on('open', () => {
              this.setupConnection(conn);
         });
-        // If already open (rare for incoming immediately), setup
         if (conn.open) this.setupConnection(conn);
       });
-
-      this.peer.on('error', (err) => {
-        const errStr = String(err);
-        if (
-            err.type === 'network' || 
-            err.type === 'server-error' || 
-            errStr.includes("Lost connection") ||
-            errStr.includes("Could not connect to peer")
-        ) {
-             if (this.hostId && this.peer && !this.peer.destroyed) {
-                 console.warn('P2P Network Warning:', errStr);
-             }
-             return;
-        }
-        
-        console.error('PeerJS error:', err);
-        if (!this.hostId) {
-            reject(err);
-        }
-      });
-    });
   }
 
   connect(hostId: string): Promise<void> {
@@ -101,23 +119,27 @@ export class P2PService {
 
     const conn = this.peer.connect(hostId);
 
-    conn.on('open', () => {
+    const onOpen = () => {
       clearTimeout(timeout);
       console.log('Connected to host:', hostId);
       this.setupConnection(conn);
       resolve();
-    });
+    };
 
-    conn.on('error', (err) => {
+    const onError = (err: any) => {
       clearTimeout(timeout);
       console.error('Connection error:', err);
       reject(err);
-    });
+    };
     
-    // Also handle immediate close/error cases before open
-    conn.on('close', () => {
+    // Also handle immediate close
+    const onClose = () => {
         clearTimeout(timeout);
-    });
+    };
+
+    conn.on('open', onOpen);
+    conn.on('error', onError);
+    conn.on('close', onClose);
   }
 
   private setupConnection(conn: DataConnection) {
