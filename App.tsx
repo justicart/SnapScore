@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Player, AppView, CardSettings, Round, P2PMessage } from './types';
 import { SetupView } from './views/SetupView';
@@ -312,14 +313,15 @@ const App: React.FC = () => {
         if (savedPlayers) {
             const parsed = JSON.parse(savedPlayers);
             const migratedPlayers: Player[] = parsed.map((p: any) => {
-                if (p.rounds) return p;
+                if (p.rounds) return { ...p, deviceId: p.deviceId }; // Keep deviceId
+                // Migration for old format
                 const rounds: Round[] = (p.history || []).map((score: number) => ({
                     type: 'manual',
                     id: uuidv4(),
                     score,
                     timestamp: Date.now()
                 }));
-                return { id: p.id, name: p.name, rounds };
+                return { id: p.id, name: p.name, rounds, deviceId: p.deviceId };
             });
             setPlayers(migratedPlayers);
             if (migratedPlayers.length > 0) setView(AppView.GAME);
@@ -355,8 +357,14 @@ const App: React.FC = () => {
   // --- Actions ---
 
   const handleStartGame = (newPlayers: Player[]) => {
+    const currentDeviceId = peerId || localStorage.getItem('snapscore_device_id');
+    const playersWithIdentity = newPlayers.map(p => ({ 
+        ...p, 
+        deviceId: currentDeviceId || undefined 
+    }));
+
     if (isClient) {
-        p2p.sendToHost({ type: 'REQUEST_ADD_PLAYERS', payload: newPlayers });
+        p2p.sendToHost({ type: 'REQUEST_ADD_PLAYERS', payload: playersWithIdentity });
         return;
     }
     
@@ -364,7 +372,7 @@ const App: React.FC = () => {
     setIsClient(false);
     localStorage.removeItem('snapscore_host_id');
 
-    setPlayers(prev => [...prev, ...newPlayers]);
+    setPlayers(prev => [...prev, ...playersWithIdentity]);
     setView(AppView.GAME);
 
     if (peerId) localStorage.setItem('snapscore_device_id', peerId);
@@ -540,6 +548,7 @@ const App: React.FC = () => {
             onClose={() => setIsMultiplayerOpen(false)}
             onJoin={(id) => handleJoinGame(id)}
             connectedPeers={connectedPeerIds}
+            players={players}
           />
       )}
 

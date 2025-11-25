@@ -1,4 +1,5 @@
 
+
 export interface DetectedCard {
   rank: string; // '2'-'10', 'J', 'Q', 'K', 'A', 'Joker'
   suit: string; // 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'
@@ -12,6 +13,7 @@ export type Round =
 export interface Player {
   id: string;
   name: string;
+  deviceId?: string;
   rounds: Round[];
 }
 

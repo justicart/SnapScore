@@ -1,22 +1,26 @@
 
+
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import jsQR from 'jsqr';
 import { Button } from './Button';
-import { IconX, IconCamera, IconCheck, IconCopy, IconLink } from './Icons';
+import { IconX, IconCheck, IconCopy, IconLink } from './Icons';
+import { Player } from '../types';
 
 interface MultiplayerModalProps {
   hostId: string; // The current device's Peer ID
   onJoin: (targetHostId: string) => void;
   onClose: () => void;
   connectedPeers: string[]; // List of connected client IDs
+  players?: Player[]; // Full list of players to map IDs to names
 }
 
 export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({ 
   hostId, 
   onJoin, 
   onClose,
-  connectedPeers
+  connectedPeers,
+  players = []
 }) => {
   const [mode, setMode] = useState<'HOST' | 'JOIN'>('HOST');
   const [qrDataUrl, setQrDataUrl] = useState<string>('');
@@ -164,14 +168,30 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                             <IconCheck className="w-4 h-4" />
                             {connectedPeers.length} Connected
                             </div>
-                            <div className="bg-slate-900/50 rounded-lg p-3 w-full max-h-32 overflow-y-auto text-left border border-slate-800">
+                            <div className="bg-slate-900/50 rounded-lg p-3 w-full max-h-40 overflow-y-auto text-left border border-slate-800">
                                 <p className="text-[10px] uppercase text-slate-500 font-bold mb-2 sticky top-0 bg-slate-900/90 backdrop-blur pb-1">Client IDs</p>
                                 <ul className="space-y-1">
-                                    {connectedPeers.map(id => (
-                                        <li key={id} className="text-xs font-mono text-slate-400 truncate select-all border-b border-slate-800/50 last:border-0 pb-1 last:pb-0">
-                                            {id}
-                                        </li>
-                                    ))}
+                                    {connectedPeers.map(id => {
+                                        const peerPlayers = players.filter(p => p.deviceId === id);
+                                        return (
+                                            <li key={id} className="border-b border-slate-800/50 last:border-0 pb-1.5 last:pb-0 mb-1 last:mb-0">
+                                                <div className="flex justify-between items-center">
+                                                     <span className="text-xs font-mono text-slate-500 truncate select-all">{id}</span>
+                                                </div>
+                                                {peerPlayers.length > 0 ? (
+                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                        {peerPlayers.map(p => (
+                                                            <span key={p.id} className="text-[10px] bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded border border-slate-700 font-medium">
+                                                                {p.name}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-[10px] text-slate-600 italic pl-1">No players added yet</span>
+                                                )}
+                                            </li>
+                                        );
+                                    })}
                                 </ul>
                             </div>
                         </div>

@@ -341,9 +341,6 @@ export const GameView: React.FC<GameViewProps> = ({
                      <button onClick={() => setShowNewGameConfirm(true)} className="text-xs font-bold text-emerald-400 hover:text-white px-2 py-1 bg-emerald-500/10 rounded mr-1 border border-emerald-500/20 hover:bg-emerald-500/20">New Game</button>
                 )}
                 
-                <button onClick={onOpenMultiplayer} className="p-2 rounded-full bg-slate-800 text-emerald-400 hover:bg-slate-700">
-                    <IconQrCode className="w-5 h-5" />
-                </button>
                 <button onClick={onOpenSettings} className="p-2 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700">
                 <IconSettings className="w-5 h-5" />
                 </button>
@@ -653,3 +650,4 @@ export const GameView: React.FC<GameViewProps> = ({
     </div>
   );
 };
+    
