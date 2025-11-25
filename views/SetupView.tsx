@@ -131,14 +131,6 @@ export const SetupView: React.FC<SetupViewProps> = ({
             {isClient && <span className="text-xs text-emerald-400 font-bold tracking-wider uppercase">Joined Lobby</span>}
         </div>
         <div className="flex gap-2">
-            {!isClient && (
-                <button 
-                    onClick={onOpenMultiplayer}
-                    className="p-2 rounded-full bg-slate-800 text-emerald-400 hover:bg-slate-700 transition-colors"
-                >
-                    <IconQrCode className="w-6 h-6" />
-                </button>
-            )}
             <button 
                 onClick={onOpenSettings}
                 className="p-2 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
@@ -154,7 +146,17 @@ export const SetupView: React.FC<SetupViewProps> = ({
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
             <div className="flex justify-between items-center mb-3">
                 <h3 className="text-xs text-slate-500 uppercase font-bold">Current Roster ({players.length})</h3>
-                {isClient && players.length === 0 && <span className="animate-pulse w-2 h-2 bg-emerald-500 rounded-full"></span>}
+                <div className="flex items-center gap-2">
+                    {isClient && players.length === 0 && <span className="animate-pulse w-2 h-2 bg-emerald-500 rounded-full"></span>}
+                    {!isClient && (
+                        <button 
+                            onClick={onOpenMultiplayer}
+                            className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                        >
+                            <IconQrCode className="w-5 h-5" />
+                        </button>
+                    )}
+                </div>
             </div>
             
             {players.length === 0 ? (
