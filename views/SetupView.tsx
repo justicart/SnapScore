@@ -1,9 +1,10 @@
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Player } from '../types';
+import { Player, CardSettings } from '../types';
 import { Button } from '../components/Button';
 import { IconTrash, IconSettings, IconPlus, IconQrCode, IconCheck } from '../components/Icons';
 import { v4 as uuidv4 } from 'uuid';
+import { calculatePlayerTotal } from '../utils/scoringUtils';
 
 interface SetupViewProps {
   onStart: (players: Player[]) => void;
@@ -22,10 +23,23 @@ export const SetupView: React.FC<SetupViewProps> = ({
 }) => {
   const [names, setNames] = useState<string[]>(['']);
   const [joined, setJoined] = useState(false);
+  const [lastGame, setLastGame] = useState<{players: Player[], settings: CardSettings, timestamp: number} | null>(null);
   
   // Refs for auto-focusing new inputs
   const lastInputRef = useRef<HTMLInputElement>(null);
   const prevNamesLength = useRef(names.length);
+
+  // Load last game history
+  useEffect(() => {
+      const stored = localStorage.getItem('snapscore_last_game');
+      if (stored) {
+          try {
+              setLastGame(JSON.parse(stored));
+          } catch (e) {
+              console.error("Failed to parse last game", e);
+          }
+      }
+  }, []);
 
   // Focus the last input when a new player is added
   useEffect(() => {
@@ -211,6 +225,41 @@ export const SetupView: React.FC<SetupViewProps> = ({
             </Button>
             </form>
         </div>
+
+        {/* Last Game Section */}
+        {lastGame && (
+            <div className="pt-6 border-t border-slate-800">
+                <h3 className="text-xs text-slate-500 uppercase font-bold mb-3">Last Game Results</h3>
+                <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
+                    <div className="flex justify-between text-xs text-slate-500 mb-2">
+                        <span>{new Date(lastGame.timestamp).toLocaleDateString()}</span>
+                        <span>{new Date(lastGame.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <ul className="space-y-2">
+                        {lastGame.players
+                            .map(p => ({...p, score: calculatePlayerTotal(p, lastGame.settings)}))
+                            .sort((a, b) => {
+                                // Sort based on winning condition
+                                if (lastGame.settings.winningScoreType === 'highest') return b.score - a.score;
+                                return a.score - b.score;
+                            })
+                            .map((p, i) => (
+                            <li key={p.id} className="flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <span className={`text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full ${i === 0 ? 'bg-gold-500/20 text-gold-400' : 'bg-slate-700 text-slate-400'}`}>
+                                        {i + 1}
+                                    </span>
+                                    <span className="text-slate-300 text-sm">{p.name}</span>
+                                </div>
+                                <span className={`font-mono font-bold ${i === 0 ? 'text-gold-400' : 'text-slate-400'}`}>
+                                    {p.score}
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                </div>
+            </div>
+        )}
       </div>
 
       <div className="p-6 border-t border-slate-800 bg-felt-900 shrink-0 z-10">

@@ -46,6 +46,7 @@ const App: React.FC = () => {
   
   // Refs
   const joinCancelledRef = useRef(false);
+  const handleP2PMessageRef = useRef<(msg: P2PMessage) => void>(() => {});
   
   // Force sync effect on connection events
   const [p2pUpdateTick, setP2pUpdateTick] = useState(0);
@@ -76,7 +77,7 @@ const App: React.FC = () => {
         
         p2p.onMessage((msg) => {
           if (msg.type === 'HEARTBEAT') return; // Should be filtered by service, but safety check
-          handleP2PMessage(msg);
+          handleP2PMessageRef.current(msg);
         });
         
         p2p.onConnectionChange(() => {
@@ -201,14 +202,35 @@ const App: React.FC = () => {
       } else if (msg.type === 'REQUEST_ADD_PLAYERS') {
           setPlayers(prev => [...prev, ...msg.payload]);
       } else if (msg.type === 'GAME_ENDED') {
+          // Save history before clearing
+          if (players.length > 0) {
+             try {
+                 localStorage.setItem('snapscore_last_game', JSON.stringify({ 
+                     timestamp: Date.now(), 
+                     players, 
+                     settings 
+                 }));
+             } catch (e) { console.warn("Failed to save history", e); }
+          }
+
           // Host explicitly ended the session
           setHostEndedSession(true);
           setIsClient(false);
           localStorage.removeItem('snapscore_host_id');
           setRetryCount(0);
+          // Clear local state so user sees a fresh setup screen, not the old game
+          setPlayers([]);
+          setSettings(DEFAULT_SETTINGS);
+          localStorage.removeItem('snapscore_players');
+          localStorage.removeItem('snapscore_settings');
           setView(AppView.SETUP);
       }
   };
+
+  // Keep handler ref up to date so P2P listener always sees fresh state
+  useEffect(() => {
+      handleP2PMessageRef.current = handleP2PMessage;
+  });
 
   const handleJoinGame = async (targetHostId: string, silent = false) => {
       // If we are already connected to this host, don't try again
@@ -338,6 +360,10 @@ const App: React.FC = () => {
         return;
     }
     
+    // Ensure host state is clean
+    setIsClient(false);
+    localStorage.removeItem('snapscore_host_id');
+
     setPlayers(prev => [...prev, ...newPlayers]);
     setView(AppView.GAME);
 
@@ -386,6 +412,17 @@ const App: React.FC = () => {
     }
     // Host Logic: New Game -> New ID
     
+    // Save history before clearing
+    if (players.length > 0) {
+        try {
+            localStorage.setItem('snapscore_last_game', JSON.stringify({ 
+                timestamp: Date.now(), 
+                players, 
+                settings 
+            }));
+        } catch (e) { console.warn("Failed to save history", e); }
+    }
+    
     // 1. Broadcast to clients that game is ending so they don't retry
     p2p.broadcast({ type: 'GAME_ENDED', payload: null });
 
@@ -394,6 +431,10 @@ const App: React.FC = () => {
         setPlayers([]);
         localStorage.removeItem('snapscore_players');
         localStorage.removeItem('snapscore_device_id');
+        // Ensure host doesn't have client artifacts that could trigger reconnect loops
+        localStorage.removeItem('snapscore_host_id');
+        setIsClient(false);
+        setIsJoining(false);
         
         p2p.destroy();
         
