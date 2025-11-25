@@ -83,17 +83,18 @@ export class P2PService {
   private attachRuntimeListeners(peer: Peer) {
       peer.on('disconnected', () => {
         if (peer && !peer.destroyed) {
-            // console.log('Peer disconnected from server, attempting reconnect...');
             peer.reconnect();
         }
       });
 
       peer.on('connection', (conn) => {
-        // console.log('Incoming connection from', conn.peer);
         conn.on('open', () => {
              this.setupConnection(conn);
         });
-        if (conn.open) this.setupConnection(conn);
+        // If already open (rare race condition), setup immediately
+        if (conn.open) {
+            this.setupConnection(conn);
+        }
       });
   }
 
@@ -113,17 +114,14 @@ export class P2PService {
         return;
     }
 
-    // Critical: Close any existing connection to this host ID to prevent zombie connections
-    // This often happens if the host refreshed and we are reconnecting to the same ID
+    // Cleanup existing connection to same host to prevent duplicates/zombies
     const existingConn = this.connections.find(c => c.peer === hostId);
     if (existingConn) {
         console.log("Closing existing stale connection to host:", hostId);
         existingConn.close();
         this.connections = this.connections.filter(c => c !== existingConn);
-        // We don't notify immediately, let the new connection logic handle state
     }
 
-    // Set a timeout for connection
     const timeout = setTimeout(() => {
         reject(new Error("Connection timed out"));
     }, 10000);
@@ -143,9 +141,10 @@ export class P2PService {
       reject(err);
     };
     
-    // Also handle immediate close during handshake
     const onClose = () => {
-        clearTimeout(timeout);
+        // If it closes during handshake
+        // We don't reject here because onError usually fires first, 
+        // but if it just closes silently, the timeout will catch it.
     };
 
     conn.on('open', onOpen);
@@ -154,28 +153,24 @@ export class P2PService {
   }
 
   private setupConnection(conn: DataConnection) {
-    // Avoid duplicates
     if (!this.connections.find(c => c.peer === conn.peer)) {
         this.connections.push(conn);
         this.notifyConnectionChange();
 
         conn.on('data', (data: any) => {
-        if (this.onMessageCallback) {
-            this.onMessageCallback(data as P2PMessage);
-        }
+            if (this.onMessageCallback) {
+                this.onMessageCallback(data as P2PMessage);
+            }
         });
 
         conn.on('close', () => {
-        this.connections = this.connections.filter(c => c !== conn);
-        console.log('Connection closed');
-        this.notifyConnectionChange();
-        });
-        
-        // Listen for open event again if setupConnection called early, 
-        // to trigger notification when actually ready
-        conn.on('open', () => {
+            this.connections = this.connections.filter(c => c !== conn);
+            console.log('Connection closed');
             this.notifyConnectionChange();
         });
+        
+        // Ensure we notify again in case listener was attached late
+        this.notifyConnectionChange();
     }
   }
 
@@ -212,7 +207,8 @@ export class P2PService {
   }
   
   get activeConnectionsCount() {
-      return this.connections.filter(c => c.open).length;
+      // We only add to this.connections when 'open' fires, so length is reliable
+      return this.connections.length;
   }
 
   destroy() {

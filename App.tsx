@@ -64,7 +64,6 @@ const App: React.FC = () => {
         // 1. We already had one (recovering session)
         // 2. We are a client (storedHostId exists)
         // 3. We are joining a game via URL
-        // 4. NOTE: If storedDeviceId was invalid/taken, p2p.init returned a NEW id. Update storage.
         if ((storedDeviceId || storedHostId || joinId) && storedDeviceId !== id) {
             localStorage.setItem('snapscore_device_id', id);
         }
@@ -78,7 +77,7 @@ const App: React.FC = () => {
             setP2pUpdateTick(t => t + 1);
         });
 
-        // Backup polling interval (just in case events miss)
+        // Backup polling interval
         intervalId = setInterval(() => {
              const count = p2p.activeConnectionsCount;
              if (count !== connectedPeers) {
@@ -87,6 +86,9 @@ const App: React.FC = () => {
         }, 5000);
 
         if (joinId) {
+            // If joining via URL, clear previous session state to prevent fallback loop
+            localStorage.removeItem('snapscore_host_id');
+            setIsClient(false);
             window.history.replaceState({}, document.title, window.location.pathname);
             handleJoinGame(joinId);
         } else if (storedHostId) {
@@ -94,14 +96,12 @@ const App: React.FC = () => {
         }
 
       } catch (err) {
-        // Suppress expected PeerJS disconnection errors during hot reloads
         if (String(err).includes("Lost connection")) return;
         console.error("Failed to init P2P", err);
       }
     };
     initP2p();
 
-    // Cleanup on unload to help PeerJS server release ID faster
     const handleUnload = () => {
         p2p.destroy();
     };
@@ -117,8 +117,6 @@ const App: React.FC = () => {
   // --- Persist ID when game is active or peers connected ---
   useEffect(() => {
     if (connectedPeers > 0 && peerId) {
-        // If we have active connections (Host with peers OR Client connected to Host),
-        // we must persist our ID to survive refreshes.
         localStorage.setItem('snapscore_device_id', peerId);
     }
   }, [connectedPeers, peerId]);
@@ -145,7 +143,6 @@ const App: React.FC = () => {
 
   // --- Sync Logic ---
   useEffect(() => {
-    // If I am Host and I have peers, broadcast state
     if (!isClient && connectedPeers > 0) {
         broadcastState();
     }
@@ -187,13 +184,12 @@ const App: React.FC = () => {
       try {
           await p2p.connect(targetHostId);
           
-          // Check if user cancelled while connecting
           if (joinCancelledRef.current) return;
 
+          // Connection success
           setIsClient(true);
           localStorage.setItem('snapscore_host_id', targetHostId);
           
-          // Ensure our ID is persisted so we can reconnect if we refresh
           const myId = p2p.getMyId();
           if (myId) {
               localStorage.setItem('snapscore_device_id', myId);
@@ -203,8 +199,14 @@ const App: React.FC = () => {
       } catch (e) {
           if (joinCancelledRef.current) return;
           console.error("Join Game Error:", e);
-          if (!silent) alert("Could not connect to host. Please try again.");
-          // Do not remove localStorage item here to allow retries on refresh/reconnect
+          
+          if (!silent) {
+              alert("Could not connect to host. Please try again.");
+              // If manual join fails, ensure we don't get stuck in isClient mode
+              setIsClient(false);
+              localStorage.removeItem('snapscore_host_id');
+          }
+          // If silent (auto-reconnect), we leave isClient=true to allow further retries
       } finally {
           if (!joinCancelledRef.current) {
               setIsJoining(false);
@@ -216,7 +218,7 @@ const App: React.FC = () => {
       joinCancelledRef.current = true;
       setIsJoining(false);
       localStorage.removeItem('snapscore_host_id');
-      setIsClient(false); // Stop auto-reconnect loop
+      setIsClient(false);
   };
 
   const handleLeaveGame = () => {
@@ -232,10 +234,8 @@ const App: React.FC = () => {
         
         if (savedPlayers) {
             const parsed = JSON.parse(savedPlayers);
-            // Migration check: if players have 'history' (array of numbers), convert to 'rounds'
             const migratedPlayers: Player[] = parsed.map((p: any) => {
                 if (p.rounds) return p;
-                // Convert old history of numbers to Manual rounds
                 const rounds: Round[] = (p.history || []).map((score: number) => ({
                     type: 'manual',
                     id: uuidv4(),
@@ -283,17 +283,14 @@ const App: React.FC = () => {
         return;
     }
     
-    // Host merges new players with existing ones
     setPlayers(prev => [...prev, ...newPlayers]);
     setView(AppView.GAME);
 
-    // We are committing to a session (Game Started), so persist the ID to survive refreshes.
-    // This ensures the Host ID stays stable even if no one has connected yet.
     if (peerId) localStorage.setItem('snapscore_device_id', peerId);
   };
 
   const handleUpdatePlayers = (newPlayers: Player[]) => {
-      if (isClient) return; // Clients cannot reorder/delete roster directly
+      if (isClient) return; 
       setPlayers(newPlayers);
   };
 
@@ -308,7 +305,6 @@ const App: React.FC = () => {
 
     setPlayers(prev => prev.map(p => {
       if (p.id === playerId) {
-        // Check if this round ID already exists (update) or is new (append)
         const existingRoundIndex = p.rounds.findIndex(r => r.id === round.id);
         let newRounds;
         
@@ -337,13 +333,11 @@ const App: React.FC = () => {
     setPlayers([]);
     localStorage.removeItem('snapscore_players');
     
-    // Explicitly destroy old session and generate new ID
     localStorage.removeItem('snapscore_device_id');
     p2p.destroy();
     
     p2p.init().then(id => {
         setPeerId(id);
-        // Do NOT save snapscore_device_id yet; waiting for Start Game or Connection
     });
     
     setView(AppView.SETUP);
@@ -379,7 +373,6 @@ const App: React.FC = () => {
     setView(AppView.GAME);
   }
 
-  // Show loading screen if manually joining OR if we are a disconnected client trying to reconnect
   const showLoading = isJoining || (isClient && connectedPeers === 0);
 
   if (showLoading) {
