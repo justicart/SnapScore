@@ -196,7 +196,7 @@ const App: React.FC = () => {
       } else if (msg.type === 'REQUEST_SAVE_ROUND') {
           handleSaveRound(msg.payload.playerId, msg.payload.round);
       } else if (msg.type === 'REQUEST_RESET') {
-          handleResetGame();
+          handleRestartGame();
       } else if (msg.type === 'REQUEST_SETTINGS_UPDATE') {
           setSettings(msg.payload);
       } else if (msg.type === 'REQUEST_ADD_PLAYERS') {
@@ -405,14 +405,15 @@ const App: React.FC = () => {
     }));
   };
 
-  const handleResetGame = async () => {
+  // Soft Reset: Clears scores, keeps players, goes to lobby
+  const handleRestartGame = () => {
     if (isClient) {
+        // Clients technically shouldn't trigger this, but if they do:
         p2p.sendToHost({ type: 'REQUEST_RESET', payload: null });
         return;
     }
-    // Host Logic: New Game -> New ID
-    
-    // Save history before clearing
+
+    // Save history
     if (players.length > 0) {
         try {
             localStorage.setItem('snapscore_last_game', JSON.stringify({ 
@@ -423,21 +424,33 @@ const App: React.FC = () => {
         } catch (e) { console.warn("Failed to save history", e); }
     }
     
-    // 1. Broadcast to clients that game is ending so they don't retry
+    // Clear rounds, keep players
+    const resetPlayers = players.map(p => ({ ...p, rounds: [] }));
+    setPlayers(resetPlayers);
+    
+    // Go to Lobby
+    setView(AppView.SETUP);
+  };
+
+  // Hard Reset: Clears everything, destroys session, new ID
+  const handleClearSession = async () => {
+    if (isClient) return;
+
+    // Broadcast end to clients
     p2p.broadcast({ type: 'GAME_ENDED', payload: null });
 
-    // 2. Wait briefly to ensure message sends, then cleanup
+    // Wait briefly then destroy
     setTimeout(() => {
         setPlayers([]);
         localStorage.removeItem('snapscore_players');
         localStorage.removeItem('snapscore_device_id');
-        // Ensure host doesn't have client artifacts that could trigger reconnect loops
         localStorage.removeItem('snapscore_host_id');
         setIsClient(false);
         setIsJoining(false);
         
         p2p.destroy();
         
+        // Start fresh
         p2p.init().then(id => {
             setPeerId(id);
         });
@@ -537,6 +550,7 @@ const App: React.FC = () => {
           onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
           isClient={isClient}
           players={players}
+          onClearSession={handleClearSession}
         />
       )}
 
@@ -558,7 +572,8 @@ const App: React.FC = () => {
           onUpdatePlayers={handleUpdatePlayers}
           onRequestScan={handleRequestScan}
           onOpenSettings={() => setView(AppView.SETTINGS)}
-          onReset={handleResetGame}
+          onNewGame={handleRestartGame}
+          onLeave={handleLeaveGame}
           onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
           isClient={isClient}
         />

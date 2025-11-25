@@ -12,6 +12,7 @@ interface SetupViewProps {
   onOpenMultiplayer: () => void;
   isClient: boolean;
   players: Player[]; // existing roster
+  onClearSession?: () => void;
 }
 
 export const SetupView: React.FC<SetupViewProps> = ({ 
@@ -19,11 +20,13 @@ export const SetupView: React.FC<SetupViewProps> = ({
   onOpenSettings, 
   onOpenMultiplayer,
   isClient,
-  players
+  players,
+  onClearSession
 }) => {
   const [names, setNames] = useState<string[]>(['']);
   const [joined, setJoined] = useState(false);
   const [lastGame, setLastGame] = useState<{players: Player[], settings: CardSettings, timestamp: number} | null>(null);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
   
   // Refs for auto-focusing new inputs
   const lastInputRef = useRef<HTMLInputElement>(null);
@@ -123,7 +126,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
   const canSubmit = isClient ? hasInput : (hasInput || players.length > 0);
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full relative">
       {/* Header */}
       <div className="flex justify-between items-center px-6 pt-6 pb-4 shrink-0">
         <div>
@@ -272,15 +275,28 @@ export const SetupView: React.FC<SetupViewProps> = ({
             </div>
         )}
 
-        <Button 
-          type="submit" 
-          form="setup-form" 
-          fullWidth 
-          disabled={!canSubmit}
-          variant={isClient ? "secondary" : "primary"}
-        >
-          {isClient ? "Join Roster" : "Start Game"}
-        </Button>
+        <div className="flex gap-3">
+            {/* Clear Button (Host only) */}
+            {!isClient && onClearSession && players.length > 0 && (
+                <Button 
+                    variant="danger" 
+                    onClick={() => setShowClearConfirm(true)}
+                    className="px-4"
+                >
+                    <IconTrash className="w-5 h-5" />
+                </Button>
+            )}
+
+            <Button 
+            type="submit" 
+            form="setup-form" 
+            fullWidth 
+            disabled={!canSubmit}
+            variant={isClient ? "secondary" : "primary"}
+            >
+            {isClient ? "Join Roster" : "Start Game"}
+            </Button>
+        </div>
         
         {isClient && players.length > 0 && !hasInput && (
             <p className="text-center text-xs text-slate-500 mt-4 animate-pulse">
@@ -288,6 +304,32 @@ export const SetupView: React.FC<SetupViewProps> = ({
             </p>
         )}
       </div>
+      
+      {/* Clear Session Confirmation Dialog */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
+                <h3 className="text-xl font-bold text-white mb-2">Clear Session?</h3>
+                <p className="text-slate-400 mb-6 text-sm">
+                    This will disconnect all players, delete the current roster, and create a new session.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                    <Button variant="secondary" onClick={() => setShowClearConfirm(false)}>
+                        Cancel
+                    </Button>
+                    <Button 
+                        variant="danger" 
+                        onClick={() => {
+                            if (onClearSession) onClearSession();
+                            setShowClearConfirm(false);
+                        }}
+                    >
+                        Clear All
+                    </Button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

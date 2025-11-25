@@ -16,7 +16,8 @@ interface GameViewProps {
   onRequestScan: (playerId: string, roundId?: string) => void;
   onUpdatePlayers: (players: Player[]) => void;
   onOpenSettings: () => void;
-  onReset: () => void;
+  onNewGame: () => void; // Soft reset for Host/Solo
+  onLeave: () => void;   // Leave for Client
   onOpenMultiplayer: () => void;
   isClient: boolean;
 }
@@ -28,14 +29,16 @@ export const GameView: React.FC<GameViewProps> = ({
   onRequestScan,
   onUpdatePlayers,
   onOpenSettings,
-  onReset,
+  onNewGame,
+  onLeave,
   onOpenMultiplayer,
   isClient
 }) => {
   const [manualEntryPlayerId, setManualEntryPlayerId] = useState<string | null>(null);
   const [manualEntryRoundId, setManualEntryRoundId] = useState<string | null>(null);
   const [manualScore, setManualScore] = useState<string>('');
-  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [playerToDelete, setPlayerToDelete] = useState<string | null>(null);
   
   // Roster Editing State
@@ -332,7 +335,12 @@ export const GameView: React.FC<GameViewProps> = ({
                 </button>
             ) : (
                 <>
-                <button onClick={() => setShowResetConfirm(true)} className="text-xs text-slate-500 hover:text-red-400 px-2">New Game</button>
+                {isClient ? (
+                     <button onClick={() => setShowLeaveConfirm(true)} className="text-xs font-bold text-slate-400 hover:text-white px-2 py-1 bg-slate-800 rounded mr-1 border border-slate-700">Leave Game</button>
+                ) : (
+                     <button onClick={() => setShowNewGameConfirm(true)} className="text-xs font-bold text-emerald-400 hover:text-white px-2 py-1 bg-emerald-500/10 rounded mr-1 border border-emerald-500/20 hover:bg-emerald-500/20">New Game</button>
+                )}
+                
                 <button onClick={onOpenMultiplayer} className="p-2 rounded-full bg-slate-800 text-emerald-400 hover:bg-slate-700">
                     <IconQrCode className="w-5 h-5" />
                 </button>
@@ -390,21 +398,46 @@ export const GameView: React.FC<GameViewProps> = ({
         )}
       </div>
 
-      {/* Reset Confirmation Dialog */}
-      {showResetConfirm && (
+      {/* New Game Confirmation Dialog */}
+      {showNewGameConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
                 <h3 className="text-xl font-bold text-white mb-2">Start New Game?</h3>
-                <p className="text-slate-400 mb-6 text-sm">All current scores and progress will be lost.</p>
+                <p className="text-slate-400 mb-6 text-sm">
+                    Current scores will be cleared, but players and settings will be kept.
+                </p>
                 <div className="grid grid-cols-2 gap-3">
-                    <Button variant="secondary" onClick={() => setShowResetConfirm(false)}>
+                    <Button variant="secondary" onClick={() => setShowNewGameConfirm(false)}>
+                        Cancel
+                    </Button>
+                    <Button variant="primary" onClick={() => {
+                        onNewGame();
+                        setShowNewGameConfirm(false);
+                    }}>
+                        New Game
+                    </Button>
+                </div>
+            </div>
+        </div>
+      )}
+
+      {/* Leave Game Confirmation Dialog */}
+      {showLeaveConfirm && (
+        <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
+                <h3 className="text-xl font-bold text-white mb-2">Leave Game?</h3>
+                <p className="text-slate-400 mb-6 text-sm">
+                    You will disconnect from the session.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                    <Button variant="secondary" onClick={() => setShowLeaveConfirm(false)}>
                         Cancel
                     </Button>
                     <Button variant="danger" onClick={() => {
-                        onReset();
-                        setShowResetConfirm(false);
+                        onLeave();
+                        setShowLeaveConfirm(false);
                     }}>
-                        Reset
+                        Leave
                     </Button>
                 </div>
             </div>
