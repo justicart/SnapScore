@@ -1,4 +1,5 @@
 
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Player, CardSettings } from '../types';
 import { Button } from '../components/Button';
@@ -13,6 +14,7 @@ interface SetupViewProps {
   isClient: boolean;
   players: Player[]; // existing roster
   onClearSession?: () => void;
+  onRemovePlayer?: (id: string) => void;
 }
 
 export const SetupView: React.FC<SetupViewProps> = ({ 
@@ -21,12 +23,21 @@ export const SetupView: React.FC<SetupViewProps> = ({
   onOpenMultiplayer,
   isClient,
   players,
-  onClearSession
+  onClearSession,
+  onRemovePlayer
 }) => {
   const [names, setNames] = useState<string[]>(['']);
   const [joined, setJoined] = useState(false);
   const [lastGame, setLastGame] = useState<{players: Player[], settings: CardSettings, timestamp: number} | null>(null);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [myPlayerIds, setMyPlayerIds] = useState<Set<string>>(() => {
+    try {
+        const stored = localStorage.getItem('snapscore_my_player_ids');
+        return new Set(stored ? JSON.parse(stored) : []);
+    } catch {
+        return new Set();
+    }
+  });
   
   // Refs for auto-focusing new inputs
   const lastInputRef = useRef<HTMLInputElement>(null);
@@ -98,7 +109,9 @@ export const SetupView: React.FC<SetupViewProps> = ({
         const stored = localStorage.getItem('snapscore_my_player_ids');
         const existing = stored ? JSON.parse(stored) : [];
         const newIds = validPlayers.map(p => p.id);
-        localStorage.setItem('snapscore_my_player_ids', JSON.stringify([...existing, ...newIds]));
+        const updated = [...existing, ...newIds];
+        localStorage.setItem('snapscore_my_player_ids', JSON.stringify(updated));
+        setMyPlayerIds(new Set(updated));
       } catch (err) {
         console.error("Failed to save player ownership", err);
       }
@@ -170,11 +183,22 @@ export const SetupView: React.FC<SetupViewProps> = ({
             ) : (
                 <ul className="space-y-2">
                     {players.map(p => (
-                        <li key={p.id} className="text-white font-medium flex items-center gap-3 bg-slate-900/50 p-2 rounded-lg">
-                            <div className="w-8 h-8 bg-emerald-900 text-emerald-400 rounded-full flex items-center justify-center text-sm font-bold">
-                                {p.name.charAt(0).toUpperCase()}
+                        <li key={p.id} className="text-white font-medium flex items-center justify-between bg-slate-900/50 p-2 rounded-lg group">
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-emerald-900 text-emerald-400 rounded-full flex items-center justify-center text-sm font-bold">
+                                    {p.name.charAt(0).toUpperCase()}
+                                </div>
+                                {p.name}
                             </div>
-                            {p.name}
+                            {onRemovePlayer && (!isClient || myPlayerIds.has(p.id)) && (
+                                <button 
+                                    onClick={() => onRemovePlayer(p.id)}
+                                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                    title="Remove Player"
+                                >
+                                    <IconTrash className="w-4 h-4" />
+                                </button>
+                            )}
                         </li>
                     ))}
                 </ul>

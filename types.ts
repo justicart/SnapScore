@@ -52,5 +52,6 @@ export type P2PMessage =
   | { type: 'REQUEST_RESET'; payload: null }
   | { type: 'REQUEST_SETTINGS_UPDATE'; payload: CardSettings }
   | { type: 'REQUEST_ADD_PLAYERS'; payload: Player[] }
+  | { type: 'REQUEST_REMOVE_PLAYER'; payload: { playerId: string } }
   | { type: 'HEARTBEAT'; payload: number }
   | { type: 'GAME_ENDED'; payload: null };

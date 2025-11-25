@@ -202,6 +202,8 @@ const App: React.FC = () => {
           setSettings(msg.payload);
       } else if (msg.type === 'REQUEST_ADD_PLAYERS') {
           setPlayers(prev => [...prev, ...msg.payload]);
+      } else if (msg.type === 'REQUEST_REMOVE_PLAYER') {
+          setPlayers(prev => prev.filter(p => p.id !== msg.payload.playerId));
       } else if (msg.type === 'GAME_ENDED') {
           // Save history before clearing
           if (players.length > 0) {
@@ -382,6 +384,14 @@ const App: React.FC = () => {
       if (isClient) return; 
       setPlayers(newPlayers);
   };
+  
+  const handleRemovePlayer = (playerId: string) => {
+      if (isClient) {
+          p2p.sendToHost({ type: 'REQUEST_REMOVE_PLAYER', payload: { playerId } });
+          return;
+      }
+      setPlayers(prev => prev.filter(p => p.id !== playerId));
+  };
 
   const handleSaveRound = (playerId: string, round: Round) => {
     if (isClient) {
@@ -560,6 +570,7 @@ const App: React.FC = () => {
           isClient={isClient}
           players={players}
           onClearSession={handleClearSession}
+          onRemovePlayer={handleRemovePlayer}
         />
       )}
 
