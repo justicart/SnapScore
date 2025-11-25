@@ -30,7 +30,9 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   // Host Mode: Generate QR
   useEffect(() => {
     if (mode === 'HOST' && hostId) {
-      QRCode.toDataURL(hostId, { margin: 2, width: 300, color: { dark: '#0f221b', light: '#10b981' } })
+      // Generate full URL so standard camera apps can open the site
+      const url = `${window.location.origin}${window.location.pathname}?join=${hostId}`;
+      QRCode.toDataURL(url, { margin: 2, width: 300, color: { dark: '#0f221b', light: '#10b981' } })
         .then(url => setQrDataUrl(url))
         .catch(err => console.error(err));
     }
@@ -96,7 +98,25 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
           if (code) {
             console.log("Found QR:", code.data);
             if (code.data) {
-                onJoin(code.data);
+                let targetId = code.data;
+                
+                // Try to parse URL if valid
+                try {
+                    // Check if it's a URL
+                    if (targetId.startsWith('http') || targetId.includes('join=')) {
+                        const url = new URL(targetId);
+                        const id = url.searchParams.get('join');
+                        if (id) targetId = id;
+                    }
+                } catch (e) {
+                    // If URL parsing fails, check if we can split manually
+                    if (targetId.includes('join=')) {
+                        const parts = targetId.split('join=');
+                        if (parts[1]) targetId = parts[1].split('&')[0];
+                    }
+                }
+
+                onJoin(targetId);
                 return; 
             }
           }
