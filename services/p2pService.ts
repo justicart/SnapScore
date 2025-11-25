@@ -112,6 +112,16 @@ export class P2PService {
         return;
     }
 
+    // Critical: Close any existing connection to this host ID to prevent zombie connections
+    // This often happens if the host refreshed and we are reconnecting to the same ID
+    const existingConn = this.connections.find(c => c.peer === hostId);
+    if (existingConn) {
+        console.log("Closing existing stale connection to host:", hostId);
+        existingConn.close();
+        this.connections = this.connections.filter(c => c !== existingConn);
+        this.notifyConnectionChange();
+    }
+
     // Set a timeout for connection
     const timeout = setTimeout(() => {
         reject(new Error("Connection timed out"));

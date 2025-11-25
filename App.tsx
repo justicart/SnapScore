@@ -33,7 +33,9 @@ const App: React.FC = () => {
   const [isMultiplayerOpen, setIsMultiplayerOpen] = useState(false);
   const [peerId, setPeerId] = useState<string>('');
   const [connectedPeers, setConnectedPeers] = useState<number>(0);
-  const [isClient, setIsClient] = useState(false);
+  
+  // Initialize isClient based on localStorage to support refresh/reconnect
+  const [isClient, setIsClient] = useState(() => !!localStorage.getItem('snapscore_host_id'));
   const [isJoining, setIsJoining] = useState(false);
   
   // Refs
@@ -99,6 +101,26 @@ const App: React.FC = () => {
     };
   }, []);
 
+  // --- Auto-Reconnect Effect ---
+  useEffect(() => {
+    // If we think we are a client, but we have no connections, try to reconnect
+    if (!isClient) return;
+
+    if (connectedPeers === 0) {
+      const hostId = localStorage.getItem('snapscore_host_id');
+      if (hostId) {
+        // Debounce reconnection attempts
+        const timer = setTimeout(() => {
+            if (!isJoining && connectedPeers === 0) {
+                console.log("Connection lost. Attempting to reconnect to host:", hostId);
+                handleJoinGame(hostId, true);
+            }
+        }, 2000);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [isClient, connectedPeers, isJoining]);
+
   // --- Sync Logic ---
   useEffect(() => {
     // If I am Host and I have peers, broadcast state
@@ -153,7 +175,7 @@ const App: React.FC = () => {
           if (joinCancelledRef.current) return;
           console.error("Join Game Error:", e);
           if (!silent) alert("Could not connect to host.");
-          // Do not remove localStorage item here to allow retries on refresh
+          // Do not remove localStorage item here to allow retries on refresh/reconnect
       } finally {
           if (!joinCancelledRef.current) {
               setIsJoining(false);
@@ -165,6 +187,7 @@ const App: React.FC = () => {
       joinCancelledRef.current = true;
       setIsJoining(false);
       localStorage.removeItem('snapscore_host_id');
+      setIsClient(false); // Stop auto-reconnect loop
   };
 
   const handleLeaveGame = () => {
@@ -312,12 +335,19 @@ const App: React.FC = () => {
     setView(AppView.GAME);
   }
 
-  if (isJoining) {
+  // Show loading screen if manually joining OR if we are a disconnected client trying to reconnect
+  const showLoading = isJoining || (isClient && connectedPeers === 0);
+
+  if (showLoading) {
       return (
           <div className="h-[100dvh] bg-felt-900 flex flex-col items-center justify-center p-6">
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
-              <h2 className="text-xl font-bold text-white animate-pulse">Joining Game...</h2>
-              <p className="text-sm text-slate-400 mt-2">Connecting to host...</p>
+              <h2 className="text-xl font-bold text-white animate-pulse">
+                {isJoining && connectedPeers === 0 ? "Joining Game..." : "Reconnecting..."}
+              </h2>
+              <p className="text-sm text-slate-400 mt-2">
+                {isJoining && connectedPeers === 0 ? "Connecting to host..." : "Lost connection to host. Retrying..."}
+              </p>
               <Button variant="secondary" onClick={handleCancelJoin} className="mt-8 border border-slate-700">
                   Cancel
               </Button>
