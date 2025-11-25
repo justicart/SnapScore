@@ -8,9 +8,11 @@ interface SettingsViewProps {
   settings: CardSettings;
   onSave: (settings: CardSettings) => void;
   onCancel: () => void;
+  isClient?: boolean;
+  onLeave?: () => void;
 }
 
-export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, onCancel }) => {
+export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, onCancel, isClient, onLeave }) => {
   const [formData, setFormData] = useState<CardSettings>(settings);
 
   const handleChange = (field: keyof CardSettings, value: any) => {
@@ -197,11 +199,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
           </div>
         </div>
 
+        {isClient && onLeave && (
+            <div className="pt-6 border-t border-slate-700/50 mt-4">
+                 <label className="block text-sm font-medium text-red-400 uppercase tracking-wider mb-2">Danger Zone</label>
+                 <Button variant="danger" fullWidth onClick={onLeave}>
+                     Disconnect & Leave Game
+                 </Button>
+                 <p className="text-xs text-slate-500 mt-2 text-center">This will disconnect you from the current session.</p>
+            </div>
+        )}
+
       </div>
 
       <div className="p-4 border-t border-slate-800 bg-felt-900">
         <Button fullWidth onClick={() => onSave(formData)}>
-          Save Rules
+          {isClient ? "Close" : "Save Rules"}
         </Button>
       </div>
     </div>

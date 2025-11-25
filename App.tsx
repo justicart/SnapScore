@@ -57,9 +57,13 @@ const App: React.FC = () => {
 
         const params = new URLSearchParams(window.location.search);
         const joinId = params.get('join');
+        const storedHostId = localStorage.getItem('snapscore_host_id');
+
         if (joinId) {
             window.history.replaceState({}, document.title, window.location.pathname);
             handleJoinGame(joinId);
+        } else if (storedHostId) {
+            handleJoinGame(storedHostId);
         }
 
       } catch (err) {
@@ -118,13 +122,20 @@ const App: React.FC = () => {
       try {
           await p2p.connect(targetHostId);
           setIsClient(true);
+          localStorage.setItem('snapscore_host_id', targetHostId);
           setIsMultiplayerOpen(false);
       } catch (e) {
           console.error(e);
           alert("Could not connect to host.");
+          localStorage.removeItem('snapscore_host_id');
       } finally {
           setIsJoining(false);
       }
+  };
+
+  const handleLeaveGame = () => {
+      localStorage.removeItem('snapscore_host_id');
+      window.location.reload();
   };
 
   // --- Local Storage & Migration (Only if Host) ---
@@ -272,6 +283,7 @@ const App: React.FC = () => {
           <div className="h-[100dvh] bg-felt-900 flex flex-col items-center justify-center p-6">
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
               <h2 className="text-xl font-bold text-white animate-pulse">Joining Game...</h2>
+              <p className="text-sm text-slate-400 mt-2">Connecting to host...</p>
           </div>
       );
   }
@@ -302,6 +314,8 @@ const App: React.FC = () => {
           settings={settings} 
           onSave={handleUpdateSettings}
           onCancel={() => setView(players.length > 0 ? AppView.GAME : AppView.SETUP)}
+          isClient={isClient}
+          onLeave={handleLeaveGame}
         />
       )}
 
