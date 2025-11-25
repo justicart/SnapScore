@@ -35,6 +35,9 @@ const App: React.FC = () => {
   const [isClient, setIsClient] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   
+  // Force sync effect on connection events
+  const [p2pUpdateTick, setP2pUpdateTick] = useState(0);
+  
   // --- P2P Setup ---
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
@@ -47,13 +50,19 @@ const App: React.FC = () => {
         p2p.onMessage((msg) => {
           handleP2PMessage(msg);
         });
+        
+        p2p.onConnectionChange(() => {
+            setConnectedPeers(p2p.activeConnectionsCount);
+            setP2pUpdateTick(t => t + 1);
+        });
 
-        // Clean interval usage
+        // Backup polling interval (just in case events miss)
         intervalId = setInterval(() => {
-             // @ts-ignore
-             const count = p2p.connections?.length || 0;
-             setConnectedPeers(count);
-        }, 2000);
+             const count = p2p.activeConnectionsCount;
+             if (count !== connectedPeers) {
+                 setConnectedPeers(count);
+             }
+        }, 5000);
 
         const params = new URLSearchParams(window.location.search);
         const joinId = params.get('join');
@@ -63,7 +72,7 @@ const App: React.FC = () => {
             window.history.replaceState({}, document.title, window.location.pathname);
             handleJoinGame(joinId);
         } else if (storedHostId) {
-            handleJoinGame(storedHostId);
+            handleJoinGame(storedHostId, true);
         }
 
       } catch (err) {
@@ -82,10 +91,11 @@ const App: React.FC = () => {
 
   // --- Sync Logic ---
   useEffect(() => {
+    // If I am Host and I have peers, broadcast state
     if (!isClient && connectedPeers > 0) {
         broadcastState();
     }
-  }, [players, settings, view, connectedPeers]);
+  }, [players, settings, view, connectedPeers, p2pUpdateTick]);
 
   const broadcastState = () => {
      p2p.broadcast({
@@ -117,7 +127,7 @@ const App: React.FC = () => {
       }
   };
 
-  const handleJoinGame = async (targetHostId: string) => {
+  const handleJoinGame = async (targetHostId: string, silent = false) => {
       setIsJoining(true);
       try {
           await p2p.connect(targetHostId);
@@ -125,9 +135,9 @@ const App: React.FC = () => {
           localStorage.setItem('snapscore_host_id', targetHostId);
           setIsMultiplayerOpen(false);
       } catch (e) {
-          console.error(e);
-          alert("Could not connect to host.");
-          localStorage.removeItem('snapscore_host_id');
+          console.error("Join Game Error:", e);
+          if (!silent) alert("Could not connect to host.");
+          // Do not remove localStorage item here to allow retries on refresh
       } finally {
           setIsJoining(false);
       }
@@ -294,7 +304,7 @@ const App: React.FC = () => {
           <MultiplayerModal 
             hostId={peerId} 
             onClose={() => setIsMultiplayerOpen(false)}
-            onJoin={handleJoinGame}
+            onJoin={(id) => handleJoinGame(id)}
             connectedPeersCount={connectedPeers}
           />
       )}
