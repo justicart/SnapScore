@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { Player, CardSettings, Round, DetectedCard } from '../types';
 import { Button } from '../components/Button';
@@ -19,6 +20,7 @@ interface GameViewProps {
   onLeave: () => void;   // Leave for Client
   onOpenMultiplayer: () => void;
   isClient: boolean;
+  isConnected?: boolean;
 }
 
 export const GameView: React.FC<GameViewProps> = ({ 
@@ -31,7 +33,8 @@ export const GameView: React.FC<GameViewProps> = ({
   onNewGame,
   onLeave,
   onOpenMultiplayer,
-  isClient
+  isClient,
+  isConnected = true
 }) => {
   const [manualEntryPlayerId, setManualEntryPlayerId] = useState<string | null>(null);
   const [manualEntryRoundId, setManualEntryRoundId] = useState<string | null>(null);
@@ -318,7 +321,12 @@ export const GameView: React.FC<GameViewProps> = ({
                 <>
                 <h1 className="text-xl font-bold text-white flex items-center gap-2">
                     Scoreboard
-                    {isClient && <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full border border-blue-500/30">JOINED</span>}
+                    {isClient && (
+                        <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${isConnected ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
+                            <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                            <span className="text-[10px] font-bold uppercase tracking-wider">{isConnected ? 'Online' : 'Offline'}</span>
+                        </div>
+                    )}
                 </h1>
                 <p className="text-xs text-slate-400">Round {Math.max(1, ...players.map(p => p.rounds.length)) + (players.some(p => p.rounds.length < Math.max(...players.map(pl => pl.rounds.length))) ? 0 : 1)}</p>
                 </>

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Player, AppView, CardSettings, Round, P2PMessage } from './types';
 import { SetupView } from './views/SetupView';
@@ -147,8 +148,7 @@ const App: React.FC = () => {
       if (hostId) {
         if (retryCount >= MAX_RETRIES) {
             console.warn("Max retries reached. Stopping auto-reconnect.");
-            setIsClient(false);
-            localStorage.removeItem('snapscore_host_id');
+            // Don't fully disconnect, just let them see offline state
             return;
         }
 
@@ -505,20 +505,19 @@ const App: React.FC = () => {
     setView(AppView.GAME);
   }
 
-  const showLoading = isJoining || (isClient && connectedPeers === 0 && !hostEndedSession);
+  // Only show blocking loading screen for initial join. 
+  // If disconnected during game, we show "Offline" badge in GameView instead.
+  const showLoading = isJoining;
 
   if (showLoading) {
       return (
           <div className="h-[100dvh] bg-felt-900 flex flex-col items-center justify-center p-6">
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
               <h2 className="text-xl font-bold text-white animate-pulse">
-                {isJoining ? "Joining Game..." : "Reconnecting..."}
+                Joining Game...
               </h2>
               <p className="text-sm text-slate-400 mt-2 text-center max-w-[250px]">
-                {isJoining 
-                  ? "Connecting to host..." 
-                  : `Lost connection. Retrying (${retryCount}/${MAX_RETRIES})...`
-                }
+                Connecting to host...
               </p>
               
               <div className="mt-6 p-4 bg-slate-800/30 rounded-lg text-center border border-slate-700/30 w-full max-w-xs">
@@ -594,6 +593,7 @@ const App: React.FC = () => {
           onLeave={handleLeaveGame}
           onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
           isClient={isClient}
+          isConnected={!isClient || connectedPeers > 0}
         />
       )}
 

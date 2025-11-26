@@ -1,3 +1,4 @@
+
 import Peer, { DataConnection } from 'peerjs';
 import { P2PMessage } from '../types';
 
@@ -184,20 +185,21 @@ export class P2PService {
     // 1. If we are already tracking this specific connection object, do nothing.
     if (this.connections.includes(conn)) return;
 
-    // 2. CHECK FOR STALE CONNECTIONS (Fix for "only last remote works")
-    // If we already have a connection for this Peer ID, it is likely a stale connection 
-    // (e.g., client refreshed or reconnected). We must replace it.
-    const existingIndex = this.connections.findIndex(c => c.peer === conn.peer);
-    
-    if (existingIndex !== -1) {
-        const staleConn = this.connections[existingIndex];
-        console.log(`[P2P] Replacing stale connection for peer: ${conn.peer}`);
+    // 2. CHECK FOR STALE CONNECTIONS (Aggressive Replacement)
+    // If we already have a connection for this Peer ID, it is likely a stale connection.
+    if (conn.peer) {
+        const existingIndex = this.connections.findIndex(c => c.peer === conn.peer);
         
-        // Remove from list immediately so its close handler doesn't trigger logic
-        this.connections.splice(existingIndex, 1);
-        
-        // Attempt to close the old connection cleanly
-        try { staleConn.close(); } catch (e) { /* ignore */ }
+        if (existingIndex !== -1) {
+            const staleConn = this.connections[existingIndex];
+            console.log(`[P2P] Replacing stale connection for peer: ${conn.peer}`);
+            
+            // Critical: Remove listeners to prevent side effects and close immediately
+            staleConn.removeAllListeners();
+            staleConn.close();
+            
+            this.connections.splice(existingIndex, 1);
+        }
     }
 
     // 3. Add the new connection
@@ -219,7 +221,6 @@ export class P2PService {
     });
 
     conn.on('close', () => {
-        // Only trigger removal if this connection is still tracked (wasn't replaced)
         if (this.connections.includes(conn)) {
             this.connections = this.connections.filter(c => c !== conn);
             console.log('Connection closed:', conn.peer);
