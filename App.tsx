@@ -291,6 +291,34 @@ const App: React.FC = () => {
       }
   };
 
+  // Helper for reliable sending
+  const sendToHostAction = async (msg: P2PMessage) => {
+      const hostId = localStorage.getItem('snapscore_host_id');
+      if (!hostId) {
+          console.warn("Attempted to send action but no host ID found.");
+          return;
+      }
+
+      // Check if we are connected to the host
+      if (!p2p.connectedPeerIds.includes(hostId)) {
+          console.log("Action triggered while disconnected. Attempting to reconnect...");
+          try {
+              // Reuse handleJoinGame to perform connection sequence (shows loading screen)
+              await handleJoinGame(hostId, true);
+              
+              // Double check connection after join attempt
+              if (!p2p.connectedPeerIds.includes(hostId)) {
+                   throw new Error("Reconnection failed");
+              }
+          } catch (e) {
+              console.error("Action failed: Could not reconnect to host", e);
+              return;
+          }
+      }
+      
+      p2p.sendToHost(msg);
+  };
+
   const handleCancelJoin = () => {
       joinCancelledRef.current = true;
       setIsJoining(false);
@@ -364,7 +392,7 @@ const App: React.FC = () => {
     }));
 
     if (isClient) {
-        p2p.sendToHost({ type: 'REQUEST_ADD_PLAYERS', payload: playersWithIdentity });
+        sendToHostAction({ type: 'REQUEST_ADD_PLAYERS', payload: playersWithIdentity });
         return;
     }
     
@@ -385,7 +413,7 @@ const App: React.FC = () => {
   
   const handleRemovePlayer = (playerId: string) => {
       if (isClient) {
-          p2p.sendToHost({ type: 'REQUEST_REMOVE_PLAYER', payload: { playerId } });
+          sendToHostAction({ type: 'REQUEST_REMOVE_PLAYER', payload: { playerId } });
           return;
       }
       setPlayers(prev => prev.filter(p => p.id !== playerId));
@@ -393,7 +421,7 @@ const App: React.FC = () => {
 
   const handleSaveRound = (playerId: string, round: Round) => {
     if (isClient) {
-        p2p.sendToHost({
+        sendToHostAction({
             type: 'REQUEST_SAVE_ROUND',
             payload: { playerId, round }
         });
@@ -425,7 +453,7 @@ const App: React.FC = () => {
   const handleRestartGame = () => {
     if (isClient) {
         // Clients technically shouldn't trigger this, but if they do:
-        p2p.sendToHost({ type: 'REQUEST_RESET', payload: null });
+        sendToHostAction({ type: 'REQUEST_RESET', payload: null });
         return;
     }
 
@@ -477,7 +505,7 @@ const App: React.FC = () => {
 
   const handleUpdateSettings = (newSettings: CardSettings) => {
       if (isClient) {
-          p2p.sendToHost({ type: 'REQUEST_SETTINGS_UPDATE', payload: newSettings });
+          sendToHostAction({ type: 'REQUEST_SETTINGS_UPDATE', payload: newSettings });
           return;
       }
       setSettings(newSettings);
@@ -507,6 +535,7 @@ const App: React.FC = () => {
 
   // Only show blocking loading screen for initial join. 
   // If disconnected during game, we show "Offline" badge in GameView instead.
+  // HOWEVER, if we are reconnecting during an action (isJoining becomes true), we SHOW it to ensure action durability.
   const showLoading = isJoining;
 
   if (showLoading) {
@@ -514,10 +543,10 @@ const App: React.FC = () => {
           <div className="h-[100dvh] bg-felt-900 flex flex-col items-center justify-center p-6">
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-6"></div>
               <h2 className="text-xl font-bold text-white animate-pulse">
-                Joining Game...
+                {localStorage.getItem('snapscore_host_id') ? 'Reconnecting...' : 'Joining Game...'}
               </h2>
               <p className="text-sm text-slate-400 mt-2 text-center max-w-[250px]">
-                Connecting to host...
+                Syncing with host...
               </p>
               
               <div className="mt-6 p-4 bg-slate-800/30 rounded-lg text-center border border-slate-700/30 w-full max-w-xs">

@@ -279,11 +279,13 @@ export class P2PService {
   }
   
   get activeConnectionsCount() {
-      return this.connections.length;
+      // Strictly count only open connections
+      return this.connections.filter(c => c.open).length;
   }
 
   get connectedPeerIds() {
-      return this.connections.map(c => c.peer);
+      // Strictly return only open peer IDs
+      return this.connections.filter(c => c.open).map(c => c.peer);
   }
 
   destroy() {
