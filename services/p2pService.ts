@@ -1,4 +1,3 @@
-
 import Peer, { DataConnection } from 'peerjs';
 import { P2PMessage } from '../types';
 
@@ -12,7 +11,7 @@ export class P2PService {
   private onMessageCallback: ((msg: P2PMessage) => void) | null = null;
   private onConnectionChangeCallback: (() => void) | null = null;
   private hostId: string | null = null;
-  private heartbeatInterval: NodeJS.Timeout | null = null;
+  private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
       this.startHeartbeat();
@@ -90,6 +89,7 @@ export class P2PService {
       });
 
       peer.on('connection', (conn) => {
+        // Handle incoming connections (Host side)
         conn.on('open', () => {
              this.setupConnection(conn);
         });
@@ -116,13 +116,11 @@ export class P2PService {
         return;
     }
 
-    // Cleanup existing connection to same host to prevent duplicates/zombies
+    // Cleanup existing outgoing connection to same host to prevent duplicates/zombies on client side
     const existingConn = this.connections.find(c => c.peer === hostId);
     if (existingConn) {
-        // Only close if it's actually in a bad state, otherwise reusing it might be better?
-        // But PeerJS connections are tricky. Safer to recreate if we are explicitly asked to connect.
         if (!existingConn.open) {
-            console.log("Closing stale connection to host:", hostId);
+            console.log("Closing stale outgoing connection to host:", hostId);
             existingConn.close();
             this.connections = this.connections.filter(c => c !== existingConn);
         } else {
@@ -132,7 +130,6 @@ export class P2PService {
         }
     }
 
-    // Set a timeout for the connection attempt
     const timeout = setTimeout(() => {
         cleanup();
         reject(new Error("Connection timed out"));
@@ -168,7 +165,6 @@ export class P2PService {
         // Connection closed during handshake
     };
 
-    // Critical: Listen for 'peer-unavailable' on the PEER instance
     const onPeerError = (err: any) => {
         if (err.type === 'peer-unavailable' && String(err.message).includes(hostId)) {
             clearTimeout(timeout);
@@ -185,48 +181,63 @@ export class P2PService {
   }
 
   private setupConnection(conn: DataConnection) {
-    if (!this.connections.find(c => c.peer === conn.peer)) {
-        this.connections.push(conn);
-        this.notifyConnectionChange();
+    // 1. If we are already tracking this specific connection object, do nothing.
+    if (this.connections.includes(conn)) return;
 
-        conn.on('data', (data: any) => {
-            const msg = data as P2PMessage;
-            
-            // Handle Heartbeat internally
-            if (msg.type === 'HEARTBEAT') {
-                return;
-            }
+    // 2. CHECK FOR STALE CONNECTIONS (Fix for "only last remote works")
+    // If we already have a connection for this Peer ID, it is likely a stale connection 
+    // (e.g., client refreshed or reconnected). We must replace it.
+    const existingIndex = this.connections.findIndex(c => c.peer === conn.peer);
+    
+    if (existingIndex !== -1) {
+        const staleConn = this.connections[existingIndex];
+        console.log(`[P2P] Replacing stale connection for peer: ${conn.peer}`);
+        
+        // Remove from list immediately so its close handler doesn't trigger logic
+        this.connections.splice(existingIndex, 1);
+        
+        // Attempt to close the old connection cleanly
+        try { staleConn.close(); } catch (e) { /* ignore */ }
+    }
 
-            if (this.onMessageCallback) {
-                this.onMessageCallback(msg);
-            }
-        });
+    // 3. Add the new connection
+    this.connections.push(conn);
+    this.notifyConnectionChange();
 
-        conn.on('close', () => {
+    // 4. Setup listeners
+    conn.on('data', (data: any) => {
+        const msg = data as P2PMessage;
+        
+        // Handle Heartbeat internally
+        if (msg.type === 'HEARTBEAT') {
+            return;
+        }
+
+        if (this.onMessageCallback) {
+            this.onMessageCallback(msg);
+        }
+    });
+
+    conn.on('close', () => {
+        // Only trigger removal if this connection is still tracked (wasn't replaced)
+        if (this.connections.includes(conn)) {
             this.connections = this.connections.filter(c => c !== conn);
             console.log('Connection closed:', conn.peer);
             this.notifyConnectionChange();
-        });
-        
-        conn.on('error', (err) => {
-            console.error("Connection level error:", err);
-            // PeerJS usually fires 'close' after error, but we'll ensure cleanup
-            if (!conn.open) {
-                this.connections = this.connections.filter(c => c !== conn);
-                this.notifyConnectionChange();
-            }
-        });
-
-        // Ensure we notify again in case listener was attached late
-        this.notifyConnectionChange();
-    }
+        }
+    });
+    
+    conn.on('error', (err) => {
+        console.error("Connection error for peer:", conn.peer, err);
+        // We rely on 'close' to handle cleanup.
+    });
   }
 
   private startHeartbeat() {
       if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
       this.heartbeatInterval = setInterval(() => {
           this.broadcast({ type: 'HEARTBEAT', payload: Date.now() });
-      }, 2000); // Send heartbeat every 2 seconds
+      }, 2000); 
   }
 
   onMessage(callback: (msg: P2PMessage) => void) {
@@ -245,6 +256,7 @@ export class P2PService {
 
   broadcast(msg: P2PMessage) {
     this.connections.forEach(conn => {
+      // Only send if connection is open
       if (conn.open) {
         try {
             conn.send(msg);
@@ -266,7 +278,6 @@ export class P2PService {
   }
   
   get activeConnectionsCount() {
-      // We only add to this.connections when 'open' fires, so length is reliable
       return this.connections.length;
   }
 

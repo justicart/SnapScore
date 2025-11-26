@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Player, CardSettings, Round, DetectedCard } from '../types';
 import { Button } from '../components/Button';
@@ -43,7 +42,7 @@ export const GameView: React.FC<GameViewProps> = ({
   
   // Roster Editing State
   const [isEditMode, setIsEditMode] = useState(false);
-  const pressTimer = useRef<NodeJS.Timeout | null>(null);
+  const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // State for viewing round details
   const [activeRound, setActiveRound] = useState<Round | null>(null);
@@ -650,4 +649,3 @@ export const GameView: React.FC<GameViewProps> = ({
     </div>
   );
 };
-    
