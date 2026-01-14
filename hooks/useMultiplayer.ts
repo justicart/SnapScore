@@ -16,6 +16,7 @@ export const useMultiplayer = ({ players, settings, view, onMessage }: UseMultip
   const [peerId, setPeerId] = useState<string>('');
   const [connectedPeers, setConnectedPeers] = useState<number>(0);
   const [connectedPeerIds, setConnectedPeerIds] = useState<string[]>([]);
+  const [stalePeerIds, setStalePeerIds] = useState<string[]>([]);
   
   const [isClient, setIsClient] = useState(() => !!localStorage.getItem('snapscore_host_id'));
   const [isJoining, setIsJoining] = useState(false);
@@ -60,6 +61,7 @@ export const useMultiplayer = ({ players, settings, view, onMessage }: UseMultip
         p2p.onConnectionChange(() => {
             setConnectedPeers(p2p.activeConnectionsCount);
             setConnectedPeerIds(p2p.connectedPeerIds);
+            setStalePeerIds(p2p.stalePeerIds);
             setP2pUpdateTick(t => t + 1);
         });
 
@@ -67,8 +69,10 @@ export const useMultiplayer = ({ players, settings, view, onMessage }: UseMultip
         intervalId = setInterval(() => {
              const count = p2p.activeConnectionsCount;
              const ids = p2p.connectedPeerIds;
+             const stale = p2p.stalePeerIds;
              if (count !== connectedPeers) setConnectedPeers(count);
              if (JSON.stringify(ids) !== JSON.stringify(connectedPeerIds)) setConnectedPeerIds(ids);
+             if (JSON.stringify(stale) !== JSON.stringify(stalePeerIds)) setStalePeerIds(stale);
         }, 3000);
 
         if (joinId) {
@@ -245,11 +249,12 @@ export const useMultiplayer = ({ players, settings, view, onMessage }: UseMultip
       hostEndedSession, setHostEndedSession,
       connectedPeers,
       connectedPeerIds,
+      stalePeerIds,
       handleJoinGame,
       handleCancelJoin,
       handleLeaveGame,
       handleHostEndSession,
       sendToHostAction,
-      setRetryCount // exposed for rare manual resets
+      setRetryCount
   };
 };

@@ -16,6 +16,7 @@ interface PlayerCardProps {
   onDelete?: (id: string) => void;
   onRequestScan: (playerId: string) => void;
   onManualEntry: (playerId: string) => void;
+  onQuickZero?: (playerId: string) => void;
   onRoundClick: (round: Round, playerName: string, playerId: string, index: number) => void;
   onLongPress?: () => void;
 }
@@ -32,6 +33,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   onDelete,
   onRequestScan,
   onManualEntry,
+  onQuickZero,
   onRoundClick,
   onLongPress
 }) => {
@@ -131,23 +133,35 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       </div>
 
       {/* Actions */}
-      <div className="grid grid-cols-2 gap-2 mt-1 relative z-10">
+      <div className="flex gap-2 mt-1 relative z-10">
           <button 
               onClick={(e) => { e.stopPropagation(); onRequestScan(player.id); }}
-              className="flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border-emerald-600/20"
+              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border-emerald-600/20"
           >
               <IconCamera className="w-4 h-4" />
-              Scan Hand
+              Scan
           </button>
+          
           <button 
-               onClick={(e) => {
+              onClick={(e) => {
                   e.stopPropagation();
                   onManualEntry(player.id);
-               }}
-              className="flex items-center justify-center gap-2 bg-slate-700 text-slate-300 hover:bg-slate-600 py-2 rounded-lg transition-colors font-medium text-sm"
+              }}
+              className="flex-1 flex items-center justify-center gap-2 bg-slate-700 text-slate-300 hover:bg-slate-600 py-2 rounded-lg transition-colors font-medium text-sm border border-slate-700/50"
           >
               <IconPlus className="w-4 h-4" />
               Manual
+          </button>
+
+          <button
+              onClick={(e) => {
+                  e.stopPropagation();
+                  onQuickZero?.(player.id);
+              }}
+              className="w-11 flex items-center justify-center bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors font-black text-sm border border-slate-700/50"
+              title="Add 0 points"
+          >
+              0
           </button>
       </div>
     </div>

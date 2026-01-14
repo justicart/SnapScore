@@ -1,5 +1,4 @@
 
-
 export interface DetectedCard {
   rank: string; // '2'-'10', 'J', 'Q', 'K', 'A', 'Joker'
   suit: string; // 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'
@@ -49,9 +48,23 @@ export type GameState = {
 export type P2PMessage = 
   | { type: 'SYNC_STATE'; payload: GameState }
   | { type: 'REQUEST_SAVE_ROUND'; payload: { playerId: string; round: Round } }
+  | { type: 'REQUEST_DELETE_ROUND'; payload: { playerId: string; roundId: string } }
   | { type: 'REQUEST_RESET'; payload: null }
   | { type: 'REQUEST_SETTINGS_UPDATE'; payload: CardSettings }
   | { type: 'REQUEST_ADD_PLAYERS'; payload: Player[] }
   | { type: 'REQUEST_REMOVE_PLAYER'; payload: { playerId: string } }
   | { type: 'HEARTBEAT'; payload: number }
-  | { type: 'GAME_ENDED'; payload: null };
+  | { type: 'GAME_ENDED'; payload: null }
+  | { type: 'ACK'; payload: { seq: number } }
+  | { type: 'RESYNC_QUERY'; payload: { lastReceivedSeq: number } }
+  | { type: 'RESYNC_RESPONSE'; payload: { lastReceivedSeq: number } };
+
+/**
+ * Durable Stream Protocol Envelope
+ */
+export interface DurableEnvelope {
+  seq: number;
+  senderId: string;
+  message: P2PMessage;
+  timestamp: number;
+}

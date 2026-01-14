@@ -17,6 +17,7 @@ interface RoundDetailsModalProps {
   settings: CardSettings;
   onChange: (updatedRound: Round) => void;
   onSave: () => void;
+  onDelete?: () => void;
   onClose: () => void;
   onEditScoreManual: () => void;
   onRequestScan: () => void;
@@ -30,11 +31,13 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
   settings,
   onChange,
   onSave,
+  onDelete,
   onClose,
   onEditScoreManual,
   onRequestScan
 }) => {
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const updateCard = (cardId: string, field: 'rank' | 'suit', value: string) => {
     if (round.type === 'scan') {
@@ -158,32 +161,77 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
             <span className="text-2xl font-bold text-white">{calculateRoundScore(round, settings)}</span>
           </div>
         )}
-        {round.type === 'manual' ? (
-          <Button 
-            fullWidth
-            variant="secondary" 
-            onClick={onEditScoreManual}
-          >
-            Edit Score
-          </Button>
-        ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <Button 
-              variant="soft"
-              onClick={onRequestScan}
-            >
-              <IconCamera className="w-4 h-4 mr-2" />
-              Rescan
-            </Button>
-            <Button 
-              variant="primary" 
-              onClick={onSave}
-            >
-              Save Changes
-            </Button>
-          </div>
-        )}
+
+        <div className="space-y-3">
+          {round.type === 'manual' ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Button 
+                variant="secondary" 
+                onClick={onEditScoreManual}
+              >
+                Edit Score
+              </Button>
+              <Button 
+                variant="danger" 
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                Delete Score
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  variant="soft"
+                  onClick={onRequestScan}
+                >
+                  <IconCamera className="w-4 h-4 mr-2" />
+                  Rescan
+                </Button>
+                <Button 
+                  variant="primary" 
+                  onClick={onSave}
+                >
+                  Save Changes
+                </Button>
+              </div>
+              <Button 
+                variant="danger" 
+                fullWidth
+                onClick={() => setShowDeleteConfirm(true)}
+              >
+                Delete Score
+              </Button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Delete Confirmation Overlay */}
+      {showDeleteConfirm && (
+        <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
+            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6">
+                <h4 className="text-xl font-bold text-white mb-2">Delete Score?</h4>
+                <p className="text-slate-400 mb-6 text-sm">
+                    This round will be permanently removed from <span className="text-emerald-400 font-bold">{playerName}</span>'s total.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                    <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
+                        Cancel
+                    </Button>
+                    <Button 
+                      variant="danger" 
+                      onClick={() => {
+                        if (onDelete) onDelete();
+                        setShowDeleteConfirm(false);
+                      }}
+                    >
+                      Delete
+                    </Button>
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,21 +1,139 @@
 
 import Peer, { DataConnection } from 'peerjs';
-import { P2PMessage } from '../types';
+import { P2PMessage, DurableEnvelope } from '../types';
 
 export const generateShortId = () => {
   return Math.random().toString(36).substring(2, 7).toUpperCase();
 };
 
+const MAX_BUFFER_SIZE = 100;
+const STALE_THRESHOLD_MS = 15000; // 15 seconds without a word = stale
+const DISCONNECT_THRESHOLD_MS = 45000; // 45 seconds = dead
+
+class ReliablePeerConnection {
+  private outboundBuffer: DurableEnvelope[] = [];
+  private nextSeq = 1;
+  private _lastReceivedSeq = 0;
+  private processedSeqs = new Set<number>();
+  private _lastSeen = Date.now();
+  
+  constructor(
+    public readonly conn: DataConnection,
+    private readonly myPeerId: string,
+    private readonly onValidatedMessage: (msg: P2PMessage) => void
+  ) {
+    this.setupListeners();
+  }
+
+  public get lastSeen() { return this._lastSeen; }
+  public get lastReceivedSeq() { return this._lastReceivedSeq; }
+  public get isStale() { return (Date.now() - this._lastSeen) > STALE_THRESHOLD_MS; }
+  public get isDead() { return (Date.now() - this._lastSeen) > DISCONNECT_THRESHOLD_MS; }
+
+  private setupListeners() {
+    this.conn.on('data', (data: any) => {
+      const envelope = data as DurableEnvelope;
+      if (!envelope || typeof envelope.seq !== 'number') return;
+
+      this._lastSeen = Date.now(); // We heard something!
+      this.handleEnvelope(envelope);
+    });
+  }
+
+  private handleEnvelope(envelope: DurableEnvelope) {
+    const { seq, message } = envelope;
+
+    if (message.type !== 'ACK') {
+      this.conn.send({
+        seq: 0,
+        senderId: this.myPeerId,
+        message: { type: 'ACK', payload: { seq } },
+        timestamp: Date.now()
+      });
+    }
+
+    if (message.type === 'ACK') {
+      this.outboundBuffer = this.outboundBuffer.filter(e => e.seq > message.payload.seq);
+      return;
+    }
+
+    if (message.type === 'RESYNC_QUERY') {
+      this.handleResync(message.payload.lastReceivedSeq);
+      return;
+    }
+
+    if (seq > 0) {
+      if (this.processedSeqs.has(seq) || seq <= this._lastReceivedSeq) {
+        return;
+      }
+      this._lastReceivedSeq = Math.max(this._lastReceivedSeq, seq);
+      this.processedSeqs.add(seq);
+      
+      if (this.processedSeqs.size > MAX_BUFFER_SIZE) {
+        const minSeq = Math.min(...this.processedSeqs);
+        this.processedSeqs.delete(minSeq);
+      }
+    }
+
+    this.onValidatedMessage(message);
+  }
+
+  private handleResync(lastReceivedByPeer: number) {
+    console.log(`[DurableStream] Resyncing from ${lastReceivedByPeer} for peer ${this.conn.peer}`);
+    const missing = this.outboundBuffer.filter(e => e.seq > lastReceivedByPeer);
+    missing.forEach(e => {
+      if (this.conn.open) this.conn.send(e);
+    });
+  }
+
+  public send(message: P2PMessage) {
+    const envelope: DurableEnvelope = {
+      seq: this.nextSeq++,
+      senderId: this.myPeerId,
+      message,
+      timestamp: Date.now()
+    };
+
+    if (message.type !== 'HEARTBEAT') {
+      this.outboundBuffer.push(envelope);
+      if (this.outboundBuffer.length > MAX_BUFFER_SIZE) {
+        this.outboundBuffer.shift();
+      }
+    }
+
+    if (this.conn.open) {
+      try {
+        this.conn.send(envelope);
+      } catch (e) {
+        console.warn("[DurableStream] Send failed, buffered for retry", e);
+      }
+    }
+  }
+
+  public initiateHandshake() {
+    if (this.conn.open) {
+      this.conn.send({
+        seq: 0,
+        senderId: this.myPeerId,
+        message: { type: 'RESYNC_QUERY', payload: { lastReceivedSeq: this._lastReceivedSeq } },
+        timestamp: Date.now()
+      });
+    }
+  }
+}
+
 export class P2PService {
   private peer: Peer | null = null;
-  private connections: DataConnection[] = [];
+  private reliableConnections: Map<string, ReliablePeerConnection> = new Map();
   private onMessageCallback: ((msg: P2PMessage) => void) | null = null;
   private onConnectionChangeCallback: (() => void) | null = null;
   private hostId: string | null = null;
   private heartbeatInterval: ReturnType<typeof setInterval> | null = null;
+  private monitorInterval: ReturnType<typeof setInterval> | null = null;
 
   constructor() {
-      this.startHeartbeat();
+    this.startHeartbeat();
+    this.startLivenessMonitor();
   }
 
   init(preferredId?: string): Promise<string> {
@@ -37,7 +155,6 @@ export class P2PService {
           });
 
           peer.on('open', (id) => {
-            console.log('My Peer ID is: ' + id);
             this.hostId = id;
             this.peer = peer;
             this.attachRuntimeListeners(peer);
@@ -45,36 +162,12 @@ export class P2PService {
           });
 
           peer.on('error', (err) => {
-             const errStr = String(err);
-             
-             // Handle ID taken -> retry with new ID (fallback)
              if (err.type === 'unavailable-id') {
-                 console.warn(`Peer ID ${idToUse} unavailable, regenerating...`);
                  peer.destroy();
-                 createPeer(undefined); // Retry without specific ID
+                 createPeer(undefined);
                  return;
              }
-
-             // Suppress common connection loss errors which are often non-fatal during reloads
-             if (
-                err.type === 'network' || 
-                err.type === 'peer-unavailable' ||
-                err.type === 'server-error' || 
-                errStr.includes("Lost connection") ||
-                errStr.includes("Could not connect to peer")
-             ) {
-                 if (this.hostId && !peer.destroyed) {
-                     console.warn("PeerJS non-fatal error:", err);
-                     return; 
-                 }
-             }
-             
-             // If we haven't resolved yet (initialization phase fatal error)
-             if (!this.hostId) {
-                reject(err);
-             } else {
-                 console.error('PeerJS fatal error:', err);
-             }
+             if (!this.hostId) reject(err);
           });
       };
 
@@ -84,21 +177,36 @@ export class P2PService {
 
   private attachRuntimeListeners(peer: Peer) {
       peer.on('disconnected', () => {
-        if (peer && !peer.destroyed) {
-            peer.reconnect();
-        }
+        if (peer && !peer.destroyed) peer.reconnect();
       });
 
       peer.on('connection', (conn) => {
-        // Handle incoming connections (Host side)
-        conn.on('open', () => {
-             this.setupConnection(conn);
-        });
-        // If already open (rare race condition), setup immediately
-        if (conn.open) {
-            this.setupConnection(conn);
-        }
+        conn.on('open', () => this.setupReliableConnection(conn));
       });
+  }
+
+  private setupReliableConnection(conn: DataConnection) {
+    const existing = this.reliableConnections.get(conn.peer);
+    if (existing) {
+      existing.conn.close();
+      this.reliableConnections.delete(conn.peer);
+    }
+
+    const reliable = new ReliablePeerConnection(
+      conn, 
+      this.peer!.id, 
+      (msg) => this.onMessageCallback?.(msg)
+    );
+    
+    this.reliableConnections.set(conn.peer, reliable);
+    
+    conn.on('close', () => {
+      this.reliableConnections.delete(conn.peer);
+      this.notifyConnectionChange();
+    });
+
+    reliable.initiateHandshake();
+    this.notifyConnectionChange();
   }
 
   connect(hostId: string): Promise<void> {
@@ -112,133 +220,41 @@ export class P2PService {
   }
 
   private _connectToHost(hostId: string, resolve: () => void, reject: (err: any) => void) {
-    if (!this.peer) {
-        reject(new Error("Peer not initialized"));
-        return;
-    }
-
-    // Cleanup existing outgoing connection to same host to prevent duplicates/zombies on client side
-    const existingConn = this.connections.find(c => c.peer === hostId);
-    if (existingConn) {
-        if (!existingConn.open) {
-            console.log("Closing stale outgoing connection to host:", hostId);
-            existingConn.close();
-            this.connections = this.connections.filter(c => c !== existingConn);
-        } else {
-             console.log("Already connected to host:", hostId);
-             resolve();
-             return;
-        }
-    }
-
-    const timeout = setTimeout(() => {
-        cleanup();
-        reject(new Error("Connection timed out"));
-    }, 10000);
-
-    const conn = this.peer.connect(hostId, {
-        serialization: 'json'
-    });
-
-    const cleanup = () => {
-        conn.off('open', onOpen);
-        conn.off('error', onError);
-        conn.off('close', onClose);
-        this.peer?.off('error', onPeerError);
-    };
-
-    const onOpen = () => {
-      clearTimeout(timeout);
-      cleanup();
-      console.log('Connected to host:', hostId);
-      this.setupConnection(conn);
+    if (!this.peer) return reject(new Error("Peer not initialized"));
+    const conn = this.peer.connect(hostId, { serialization: 'json' });
+    conn.on('open', () => {
+      this.setupReliableConnection(conn);
       resolve();
-    };
-
-    const onError = (err: any) => {
-      clearTimeout(timeout);
-      cleanup();
-      console.error('Connection error:', err);
-      reject(err);
-    };
-    
-    const onClose = () => {
-        // Connection closed during handshake
-    };
-
-    const onPeerError = (err: any) => {
-        if (err.type === 'peer-unavailable' && String(err.message).includes(hostId)) {
-            clearTimeout(timeout);
-            cleanup();
-            console.warn(`Host ${hostId} unavailable (Fast Fail)`);
-            reject(err);
-        }
-    };
-
-    conn.on('open', onOpen);
-    conn.on('error', onError);
-    conn.on('close', onClose);
-    this.peer.on('error', onPeerError);
-  }
-
-  private setupConnection(conn: DataConnection) {
-    // 1. If we are already tracking this specific connection object, do nothing.
-    if (this.connections.includes(conn)) return;
-
-    // 2. CHECK FOR STALE CONNECTIONS (Aggressive Replacement)
-    // If we already have a connection for this Peer ID, it is likely a stale connection.
-    if (conn.peer) {
-        const existingIndex = this.connections.findIndex(c => c.peer === conn.peer);
-        
-        if (existingIndex !== -1) {
-            const staleConn = this.connections[existingIndex];
-            console.log(`[P2P] Replacing stale connection for peer: ${conn.peer}`);
-            
-            // Critical: Remove listeners to prevent side effects and close immediately
-            staleConn.removeAllListeners();
-            staleConn.close();
-            
-            this.connections.splice(existingIndex, 1);
-        }
-    }
-
-    // 3. Add the new connection
-    this.connections.push(conn);
-    this.notifyConnectionChange();
-
-    // 4. Setup listeners
-    conn.on('data', (data: any) => {
-        const msg = data as P2PMessage;
-        
-        // Handle Heartbeat internally
-        if (msg.type === 'HEARTBEAT') {
-            return;
-        }
-
-        if (this.onMessageCallback) {
-            this.onMessageCallback(msg);
-        }
     });
-
-    conn.on('close', () => {
-        if (this.connections.includes(conn)) {
-            this.connections = this.connections.filter(c => c !== conn);
-            console.log('Connection closed:', conn.peer);
-            this.notifyConnectionChange();
-        }
-    });
-    
-    conn.on('error', (err) => {
-        console.error("Connection error for peer:", conn.peer, err);
-        // We rely on 'close' to handle cleanup.
-    });
+    conn.on('error', reject);
+    setTimeout(() => { if (!conn.open) reject(new Error("Connection timed out")); }, 10000);
   }
 
   private startHeartbeat() {
-      if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = setInterval(() => {
-          this.broadcast({ type: 'HEARTBEAT', payload: Date.now() });
-      }, 2000); 
+    if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
+    this.heartbeatInterval = setInterval(() => {
+      this.broadcast({ type: 'HEARTBEAT', payload: Date.now() });
+    }, 5000); 
+  }
+
+  private startLivenessMonitor() {
+    if (this.monitorInterval) clearInterval(this.monitorInterval);
+    this.monitorInterval = setInterval(() => {
+      let changed = false;
+      this.reliableConnections.forEach((rc, peerId) => {
+        if (rc.isDead) {
+          console.log(`[P2P] Peer ${peerId} is dead, closing.`);
+          rc.conn.close();
+          this.reliableConnections.delete(peerId);
+          changed = true;
+        } else if (rc.isStale) {
+          // Send resync query to attempt to "wake" the connection
+          rc.initiateHandshake();
+          changed = true;
+        }
+      });
+      if (changed) this.notifyConnectionChange();
+    }, 5000);
   }
 
   onMessage(callback: (msg: P2PMessage) => void) {
@@ -256,48 +272,36 @@ export class P2PService {
   }
 
   broadcast(msg: P2PMessage) {
-    this.connections.forEach(conn => {
-      // Only send if connection is open
-      if (conn.open) {
-        try {
-            conn.send(msg);
-        } catch (e) {
-            console.warn("Failed to send to peer:", conn.peer, e);
-        }
-      }
-    });
+    this.reliableConnections.forEach(rc => rc.send(msg));
   }
 
   sendToHost(msg: P2PMessage) {
-    this.connections.forEach(conn => {
-        if(conn.open) conn.send(msg);
-    });
+    this.reliableConnections.forEach(rc => rc.send(msg));
   }
   
-  getMyId() {
-      return this.peer?.id;
-  }
+  getMyId() { return this.peer?.id; }
   
   get activeConnectionsCount() {
-      // Strictly count only open connections
-      return this.connections.filter(c => c.open).length;
+      return Array.from(this.reliableConnections.values()).filter(rc => rc.conn.open).length;
   }
 
   get connectedPeerIds() {
-      // Strictly return only open peer IDs
-      return this.connections.filter(c => c.open).map(c => c.peer);
+      return Array.from(this.reliableConnections.values()).filter(rc => rc.conn.open).map(rc => rc.conn.peer);
+  }
+
+  get stalePeerIds() {
+      return Array.from(this.reliableConnections.entries())
+        .filter(([_, rc]) => rc.isStale && rc.conn.open)
+        .map(([id]) => id);
   }
 
   destroy() {
     if (this.heartbeatInterval) clearInterval(this.heartbeatInterval);
-    this.connections.forEach(c => c.close());
-    if (this.peer) {
-        this.peer.removeAllListeners();
-        this.peer.destroy();
-    }
+    if (this.monitorInterval) clearInterval(this.monitorInterval);
+    this.reliableConnections.forEach(rc => rc.conn.close());
+    if (this.peer) this.peer.destroy();
     this.peer = null;
-    this.connections = [];
-    this.hostId = null;
+    this.reliableConnections.clear();
   }
 }
 

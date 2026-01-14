@@ -27,6 +27,7 @@ const App: React.FC = () => {
       scanPlayerId, setScanPlayerId,
       scanRoundId, setScanRoundId,
       updatePlayerRound,
+      deletePlayerRound,
       removePlayer,
       addPlayers,
       resetRounds,
@@ -44,7 +45,9 @@ const App: React.FC = () => {
               setView(msg.payload.view);
           }
       } else if (msg.type === 'REQUEST_SAVE_ROUND') {
-          handleSaveRoundLogic(msg.payload.playerId, msg.payload.round, true); // force local update
+          updatePlayerRound(msg.payload.playerId, msg.payload.round);
+      } else if (msg.type === 'REQUEST_DELETE_ROUND') {
+          deletePlayerRound(msg.payload.playerId, msg.payload.roundId);
       } else if (msg.type === 'REQUEST_RESET') {
           resetRounds();
           setView(AppView.SETUP);
@@ -115,7 +118,6 @@ const App: React.FC = () => {
       removePlayer(playerId);
   };
 
-  // Split logic: Routing vs Execution
   const handleSaveRound = (playerId: string, round: Round) => {
     if (isClientState) {
         multiplayer.sendToHostAction({
@@ -124,13 +126,18 @@ const App: React.FC = () => {
         });
         return;
     }
-    handleSaveRoundLogic(playerId, round);
+    updatePlayerRound(playerId, round);
   };
 
-  const handleSaveRoundLogic = (playerId: string, round: Round, isRemoteRequest = false) => {
-      // If we are client and receiving this, we update (synced). 
-      // If we are host, we update.
-      updatePlayerRound(playerId, round);
+  const handleDeleteRound = (playerId: string, roundId: string) => {
+    if (isClientState) {
+        multiplayer.sendToHostAction({
+            type: 'REQUEST_DELETE_ROUND',
+            payload: { playerId, roundId }
+        });
+        return;
+    }
+    deletePlayerRound(playerId, roundId);
   };
 
   const handleRestartGame = () => {
@@ -261,6 +268,7 @@ const App: React.FC = () => {
           players={players}
           settings={settings}
           onSaveRound={handleSaveRound}
+          onDeleteRound={handleDeleteRound}
           onUpdatePlayers={handleUpdatePlayers}
           onRequestScan={handleRequestScan}
           onOpenSettings={() => setView(AppView.SETTINGS)}

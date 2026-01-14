@@ -15,6 +15,7 @@ interface GameViewProps {
   players: Player[];
   settings: CardSettings;
   onSaveRound: (playerId: string, round: Round) => void;
+  onDeleteRound: (playerId: string, roundId: string) => void;
   onRequestScan: (playerId: string, roundId?: string) => void;
   onUpdatePlayers: (players: Player[]) => void;
   onOpenSettings: () => void;
@@ -29,6 +30,7 @@ export const GameView: React.FC<GameViewProps> = ({
   players, 
   settings,
   onSaveRound, 
+  onDeleteRound,
   onRequestScan,
   onUpdatePlayers,
   onOpenSettings,
@@ -88,10 +90,27 @@ export const GameView: React.FC<GameViewProps> = ({
     }
   };
 
+  const handleQuickZero = (playerId: string) => {
+      const round: Round = {
+          type: 'manual',
+          id: uuidv4(),
+          score: 0,
+          timestamp: Date.now()
+      };
+      onSaveRound(playerId, round);
+  };
+
   // Handlers for Round Details
   const handleRoundSave = () => {
       if (activeRound && activeRoundPlayerId) {
           onSaveRound(activeRoundPlayerId, activeRound);
+          setActiveRound(null);
+      }
+  };
+
+  const handleRoundDelete = () => {
+      if (activeRound && activeRoundPlayerId) {
+          onDeleteRound(activeRoundPlayerId, activeRound.id);
           setActiveRound(null);
       }
   };
@@ -156,6 +175,7 @@ export const GameView: React.FC<GameViewProps> = ({
         onDelete={setPlayerToDelete}
         onRequestScan={onRequestScan}
         onManualEntry={openManualEntry}
+        onQuickZero={handleQuickZero}
         onRoundClick={(round, pName, pId, rIndex) => {
             setActiveRound(round);
             setActiveRoundPlayerName(pName);
@@ -316,6 +336,7 @@ export const GameView: React.FC<GameViewProps> = ({
           settings={settings}
           onChange={setActiveRound}
           onSave={handleRoundSave}
+          onDelete={handleRoundDelete}
           onClose={() => setActiveRound(null)}
           onRequestScan={() => {
               if (activeRoundPlayerId && activeRound) {

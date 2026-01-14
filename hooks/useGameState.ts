@@ -100,6 +100,18 @@ export const useGameState = (isClient: boolean) => {
     }));
   };
 
+  const deletePlayerRound = (playerId: string, roundId: string) => {
+    setPlayers(prev => prev.map(p => {
+      if (p.id === playerId) {
+        return {
+          ...p,
+          rounds: p.rounds.filter(r => r.id !== roundId)
+        };
+      }
+      return p;
+    }));
+  };
+
   const removePlayer = (playerId: string) => {
       setPlayers(prev => prev.filter(p => p.id !== playerId));
   };
@@ -138,6 +150,7 @@ export const useGameState = (isClient: boolean) => {
       scanPlayerId, setScanPlayerId,
       scanRoundId, setScanRoundId,
       updatePlayerRound,
+      deletePlayerRound,
       removePlayer,
       addPlayers,
       resetRounds,
