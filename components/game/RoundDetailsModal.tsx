@@ -162,47 +162,40 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
           </div>
         )}
 
-        <div className="space-y-3">
+        <div className="flex gap-3">
+          <Button 
+            variant="danger" 
+            onClick={() => setShowDeleteConfirm(true)}
+            className="px-4"
+            title="Delete Score"
+          >
+            <IconTrash className="w-5 h-5" />
+          </Button>
+
           {round.type === 'manual' ? (
-            <div className="grid grid-cols-2 gap-3">
+            <Button 
+              variant="secondary" 
+              fullWidth
+              onClick={onEditScoreManual}
+            >
+              Edit Score
+            </Button>
+          ) : (
+            <div className="flex-1 grid grid-cols-2 gap-3">
               <Button 
-                variant="secondary" 
-                onClick={onEditScoreManual}
+                variant="soft"
+                onClick={onRequestScan}
               >
-                Edit Score
+                <IconCamera className="w-4 h-4 mr-2 shrink-0" />
+                Rescan
               </Button>
               <Button 
-                variant="danger" 
-                onClick={() => setShowDeleteConfirm(true)}
+                variant="primary" 
+                onClick={onSave}
               >
-                Delete Score
+                Save
               </Button>
             </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 gap-3">
-                <Button 
-                  variant="soft"
-                  onClick={onRequestScan}
-                >
-                  <IconCamera className="w-4 h-4 mr-2" />
-                  Rescan
-                </Button>
-                <Button 
-                  variant="primary" 
-                  onClick={onSave}
-                >
-                  Save Changes
-                </Button>
-              </div>
-              <Button 
-                variant="danger" 
-                fullWidth
-                onClick={() => setShowDeleteConfirm(true)}
-              >
-                Delete Score
-              </Button>
-            </>
           )}
         </div>
       </div>
