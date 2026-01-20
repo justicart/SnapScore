@@ -22,6 +22,7 @@ const App: React.FC = () => {
       view, setView,
       scanPlayerId, setScanPlayerId,
       scanRoundId, setScanRoundId,
+      targetRoundIndex, setTargetRoundIndex,
       updatePlayerRound,
       deletePlayerRound,
       removePlayer,
@@ -39,7 +40,7 @@ const App: React.FC = () => {
               setView(msg.payload.view);
           }
       } else if (msg.type === 'REQUEST_SAVE_ROUND') {
-          updatePlayerRound(msg.payload.playerId, msg.payload.round);
+          updatePlayerRound(msg.payload.playerId, msg.payload.round, msg.payload.index);
       } else if (msg.type === 'REQUEST_DELETE_ROUND') {
           deletePlayerRound(msg.payload.playerId, msg.payload.roundId);
       } else if (msg.type === 'REQUEST_RESET') {
@@ -87,12 +88,12 @@ const App: React.FC = () => {
     setView(AppView.GAME);
   };
 
-  const handleSaveRound = (playerId: string, round: Round) => {
+  const handleSaveRound = (playerId: string, round: Round, index?: number) => {
     if (isClientState) {
-        multiplayer.sendToHostAction({ type: 'REQUEST_SAVE_ROUND', payload: { playerId, round } });
+        multiplayer.sendToHostAction({ type: 'REQUEST_SAVE_ROUND', payload: { playerId, round, index } });
         return;
     }
-    updatePlayerRound(playerId, round);
+    updatePlayerRound(playerId, round, index);
   };
 
   const handleDeleteRound = (playerId: string, roundId: string) => {
@@ -129,10 +130,21 @@ const App: React.FC = () => {
       setView(players.length > 0 ? AppView.GAME : AppView.SETUP);
   };
 
-  const handleRequestScan = (playerId: string, roundId?: string) => {
+  const handleRequestScan = (playerId: string, roundId?: string, index?: number) => {
     setScanPlayerId(playerId);
     setScanRoundId(roundId || null);
+    setTargetRoundIndex(index !== undefined ? index : null);
     setView(AppView.SCAN);
+  };
+
+  const handleReconnect = () => {
+      const hostId = localStorage.getItem('snapscore_host_id');
+      if (isClientState && hostId) {
+          multiplayer.handleJoinGame(hostId);
+      } else {
+          // Soft refresh for host to reset Peer connection
+          window.location.reload();
+      }
   };
 
   if (multiplayer.isJoining) {
@@ -201,7 +213,9 @@ const App: React.FC = () => {
           onNewGame={handleRestartGame}
           onLeave={multiplayer.handleLeaveGame}
           onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
+          onReconnect={handleReconnect}
           isClient={isClientState}
+          isMultiplayer={isClientState || multiplayer.connectedPeerIds.length > 0}
           isConnected={!isClientState || multiplayer.connectedPeers > 0}
         />
       )}
@@ -210,14 +224,20 @@ const App: React.FC = () => {
         <ScanView 
           player={players.find(p => p.id === scanPlayerId)!}
           existingRoundId={scanRoundId || undefined}
+          targetIndex={targetRoundIndex !== null ? targetRoundIndex : undefined}
           settings={settings}
-          onComplete={(round) => {
-            handleSaveRound(scanPlayerId, round);
+          onComplete={(round, index) => {
+            handleSaveRound(scanPlayerId, round, index);
             setScanPlayerId(null);
             setScanRoundId(null);
+            setTargetRoundIndex(null);
             setView(AppView.GAME);
           }}
-          onCancel={() => { setScanPlayerId(null); setView(AppView.GAME); }}
+          onCancel={() => { 
+            setScanPlayerId(null); 
+            setTargetRoundIndex(null);
+            setView(AppView.GAME); 
+          }}
         />
       )}
     </div>

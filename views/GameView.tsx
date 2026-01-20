@@ -14,15 +14,17 @@ import { ManualEntryModal } from '../components/game/ManualEntryModal';
 interface GameViewProps {
   players: Player[];
   settings: CardSettings;
-  onSaveRound: (playerId: string, round: Round) => void;
+  onSaveRound: (playerId: string, round: Round, index?: number) => void;
   onDeleteRound: (playerId: string, roundId: string) => void;
-  onRequestScan: (playerId: string, roundId?: string) => void;
+  onRequestScan: (playerId: string, roundId?: string, index?: number) => void;
   onUpdatePlayers: (players: Player[]) => void;
   onOpenSettings: () => void;
   onNewGame: () => void; // Soft reset for Host/Solo
   onLeave: () => void;   // Leave for Client
   onOpenMultiplayer: () => void;
+  onReconnect: () => void;
   isClient: boolean;
+  isMultiplayer: boolean;
   isConnected?: boolean;
 }
 
@@ -37,11 +39,14 @@ export const GameView: React.FC<GameViewProps> = ({
   onNewGame,
   onLeave,
   onOpenMultiplayer,
+  onReconnect,
   isClient,
+  isMultiplayer,
   isConnected = true
 }) => {
   const [manualEntryPlayerId, setManualEntryPlayerId] = useState<string | null>(null);
   const [manualEntryRoundId, setManualEntryRoundId] = useState<string | null>(null);
+  const [manualEntryTargetIndex, setManualEntryTargetIndex] = useState<number | null>(null);
   const [manualScore, setManualScore] = useState<string>('');
   const [showNewGameConfirm, setShowNewGameConfirm] = useState(false);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
@@ -68,10 +73,14 @@ export const GameView: React.FC<GameViewProps> = ({
 
   const myPlayers = players.filter(p => myPlayerIds.has(p.id));
 
+  // Global max rounds for placeholder calculation
+  const maxRounds = Math.max(0, ...players.map(p => p.rounds.length));
+
   // Handlers for Manual Entry
-  const openManualEntry = (playerId: string, roundId?: string, initialScore?: number) => {
+  const openManualEntry = (playerId: string, roundId?: string, initialScore?: number, index?: number) => {
     setManualEntryPlayerId(playerId);
     setManualEntryRoundId(roundId || null);
+    setManualEntryTargetIndex(index !== undefined ? index : null);
     setManualScore(initialScore !== undefined ? initialScore.toString() : '');
   };
 
@@ -83,21 +92,22 @@ export const GameView: React.FC<GameViewProps> = ({
             score: scoreValue,
             timestamp: Date.now()
         };
-        onSaveRound(manualEntryPlayerId, round);
+        onSaveRound(manualEntryPlayerId, round, manualEntryTargetIndex !== null ? manualEntryTargetIndex : undefined);
         setManualEntryPlayerId(null);
         setManualEntryRoundId(null);
+        setManualEntryTargetIndex(null);
         setManualScore('');
     }
   };
 
-  const handleQuickZero = (playerId: string) => {
+  const handleQuickZero = (playerId: string, index?: number) => {
       const round: Round = {
           type: 'manual',
           id: uuidv4(),
           score: 0,
           timestamp: Date.now()
       };
-      onSaveRound(playerId, round);
+      onSaveRound(playerId, round, index);
   };
 
   // Handlers for Round Details
@@ -168,6 +178,7 @@ export const GameView: React.FC<GameViewProps> = ({
         index={index}
         totalPlayers={players.length}
         settings={settings}
+        maxRounds={maxRounds}
         isEditMode={isEditMode}
         isWinner={winningPlayerIds.has(player.id)}
         onMove={movePlayer}
@@ -194,7 +205,7 @@ export const GameView: React.FC<GameViewProps> = ({
         isClient={isClient}
         isConnected={isConnected}
         playersCount={players.length}
-        maxRounds={Math.max(0, ...players.map(p => p.rounds.length))}
+        maxRounds={maxRounds}
         onLeave={onLeave}
         onNewGame={onNewGame}
         onOpenSettings={onOpenSettings}
@@ -241,9 +252,19 @@ export const GameView: React.FC<GameViewProps> = ({
             </div>
         )}
         
-        {!isClient && !isEditMode && players.length > 0 && (
-             <div className="text-center mt-8">
-                 <p className="text-xs text-slate-600">Tip: Press and hold a player card to reorder, rename, or delete.</p>
+        {!isEditMode && players.length > 0 && (
+             <div className="text-center mt-8 flex flex-col items-center gap-2">
+                 {!isClient && (
+                    <p className="text-xs text-slate-600">Tip: Press and hold a player card to reorder, rename, or delete.</p>
+                 )}
+                 {isMultiplayer && (
+                    <button 
+                        onClick={onReconnect}
+                        className="text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:text-emerald-500 transition-colors py-1 px-3"
+                    >
+                        Reconnect
+                    </button>
+                 )}
              </div>
         )}
       </div>
@@ -320,7 +341,11 @@ export const GameView: React.FC<GameViewProps> = ({
           playerName={players.find(p => p.id === manualEntryPlayerId)?.name}
           initialScore={manualScore}
           isEdit={!!manualEntryRoundId}
-          onClose={() => { setManualEntryPlayerId(null); setManualEntryRoundId(null); }}
+          onClose={() => { 
+            setManualEntryPlayerId(null); 
+            setManualEntryRoundId(null); 
+            setManualEntryTargetIndex(null);
+          }}
           onSave={handleManualSave}
           isClient={isClient}
         />
@@ -340,13 +365,13 @@ export const GameView: React.FC<GameViewProps> = ({
           onClose={() => setActiveRound(null)}
           onRequestScan={() => {
               if (activeRoundPlayerId && activeRound) {
-                  onRequestScan(activeRoundPlayerId, activeRound.id);
+                  onRequestScan(activeRoundPlayerId, activeRound.id, activeRoundIndex ? activeRoundIndex - 1 : undefined);
                   setActiveRound(null);
               }
           }}
           onEditScoreManual={() => {
               if (activeRoundPlayerId && activeRound) {
-                  openManualEntry(activeRoundPlayerId, activeRound.id, calculateRoundScore(activeRound, settings));
+                  openManualEntry(activeRoundPlayerId, activeRound.id, calculateRoundScore(activeRound, settings), activeRoundIndex ? activeRoundIndex - 1 : undefined);
                   setActiveRound(null);
               }
           }}

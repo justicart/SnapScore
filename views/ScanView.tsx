@@ -14,11 +14,12 @@ interface ScanViewProps {
   player: Player;
   settings: CardSettings;
   existingRoundId?: string;
-  onComplete: (round: Round) => void;
+  targetIndex?: number;
+  onComplete: (round: Round, index?: number) => void;
   onCancel: () => void;
 }
 
-export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRoundId, onComplete, onCancel }) => {
+export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRoundId, targetIndex, onComplete, onCancel }) => {
   const [image, setImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -133,11 +134,11 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
     if (fullCards.length >= 0) {
         const round: Round = {
             type: 'scan',
-            id: existingRoundId || uuidv4(), // Use existing ID if provided (edit mode)
+            id: existingRoundId || uuidv4(), 
             cards: fullCards,
             timestamp: Date.now()
         };
-        onComplete(round);
+        onComplete(round, targetIndex);
     }
   };
 
@@ -170,7 +171,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
 
   if (!image) {
     return (
-      <div className="flex-1 flex flex-col w-full h-full bg-black relative overflow-hidden">
+      <div className="flex-1 flex flex-col w-full h-full bg-felt-900 relative overflow-hidden">
         <canvas ref={canvasRef} className="hidden" />
         <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileChange} className="hidden" />
         {isCameraMode && !cameraError ? (
@@ -232,7 +233,9 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
           <>
              <div className="flex justify-between items-end mb-4 shrink-0">
                 <div>
-                    <h3 className="text-sm text-slate-400 font-semibold uppercase tracking-wider">Total Score</h3>
+                    <h3 className="text-sm text-slate-400 font-semibold uppercase tracking-wider">
+                      {targetIndex !== undefined ? `Round ${targetIndex + 1} Score` : 'Score'}
+                    </h3>
                     <span className="text-5xl font-black text-emerald-400">{calculatedTotal}</span>
                 </div>
                 <div className="text-right pb-2">
@@ -311,7 +314,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
                     </Button>
                 </div>
                 <div className="mt-4 pt-3 border-t border-slate-600 flex justify-between items-center">
-                    <span className="text-slate-400 font-semibold uppercase text-xs">Total</span>
+                    <span className="text-slate-400 font-semibold uppercase text-xs">Score</span>
                     <span className="text-xl font-bold text-white">{calculatedTotal}</span>
                 </div>
              </div>

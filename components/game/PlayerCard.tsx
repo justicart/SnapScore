@@ -1,5 +1,5 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Player, CardSettings, Round } from '../../types';
 import { IconCamera, IconPlus, IconStar, IconTrash } from '../Icons';
 import { calculatePlayerTotal, calculateRoundScore } from '../../utils/scoringUtils';
@@ -9,14 +9,15 @@ interface PlayerCardProps {
   index: number;
   totalPlayers: number;
   settings: CardSettings;
+  maxRounds: number;
   isEditMode: boolean;
   isWinner: boolean;
   onMove?: (index: number, direction: 'up' | 'down') => void;
   onNameChange?: (index: number, name: string) => void;
   onDelete?: (id: string) => void;
-  onRequestScan: (playerId: string) => void;
-  onManualEntry: (playerId: string) => void;
-  onQuickZero?: (playerId: string) => void;
+  onRequestScan: (playerId: string, roundId?: string, index?: number) => void;
+  onManualEntry: (playerId: string, roundId?: string, initialScore?: number, index?: number) => void;
+  onQuickZero?: (playerId: string, index?: number) => void;
   onRoundClick: (round: Round, playerName: string, playerId: string, index: number) => void;
   onLongPress?: () => void;
 }
@@ -26,6 +27,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   index,
   totalPlayers,
   settings,
+  maxRounds,
   isEditMode,
   isWinner,
   onMove,
@@ -38,6 +40,17 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
   onLongPress
 }) => {
   const pressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to the end of the round list when a new round is added
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTo({
+        left: scrollRef.current.scrollWidth,
+        behavior: 'smooth'
+      });
+    }
+  }, [player.rounds.length, maxRounds]);
 
   const handlePressStart = () => {
     if (!onLongPress) return;
@@ -95,9 +108,28 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
     );
   }
 
+  // Logic for the "Primary" action buttons (Scan, Manual, 0)
+  const playerRoundsCount = player.rounds.length;
+  const isBehind = maxRounds > 0 && playerRoundsCount < maxRounds;
+  
+  let targetIndex: number;
+  if (maxRounds === 0) {
+      targetIndex = 0;
+  } else if (isBehind) {
+      targetIndex = maxRounds - 1;
+  } else {
+      targetIndex = maxRounds;
+  }
+
+  const displayCount = Math.max(1, maxRounds, targetIndex + 1);
+
   return (
     <div 
-      className="bg-slate-800 rounded-xl p-3 shadow-lg border border-slate-700/50 relative overflow-hidden group select-none"
+      className={`bg-slate-800 rounded-xl p-3 shadow-lg transition-all duration-300 relative overflow-hidden group select-none border ${
+        isBehind 
+          ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/20' 
+          : 'border-slate-700/50'
+      }`}
       onMouseDown={handlePressStart}
       onMouseUp={handlePressEnd}
       onMouseLeave={handlePressEnd}
@@ -110,32 +142,64 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           {player.name}
           {isWinner && <IconStar className="w-5 h-5 text-gold-400 drop-shadow-md animate-pulse-slow" />}
         </h3>
-        <span className={`text-3xl font-black ${isWinner ? 'text-gold-400' : 'text-emerald-400'}`}>
-          {calculatePlayerTotal(player, settings)}
-        </span>
+        <div className="text-right">
+          <span className={`text-3xl font-black leading-none ${isWinner ? 'text-gold-400' : 'text-emerald-400'}`}>
+            {calculatePlayerTotal(player, settings)}
+          </span>
+        </div>
       </div>
       
-      {/* History Snippet */}
-      <div className="flex gap-2 overflow-x-auto pb-2 mb-1 text-xs text-slate-400 scrollbar-hide">
-         {player.rounds.length === 0 && <span className="italic opacity-50">No rounds played</span>}
-         {player.rounds.map((round, i) => (
-             <button 
-                key={round.id || i} 
-                onClick={(e) => {
-                    e.stopPropagation();
-                    onRoundClick(round, player.name, player.id, i + 1);
-                }}
-                className="bg-slate-900/50 hover:bg-slate-900 hover:text-emerald-400 px-2 py-1 rounded border border-transparent hover:border-emerald-500/30 transition-colors cursor-pointer shrink-0"
-             >
-               {calculateRoundScore(round, settings)}
-             </button>
-         ))}
+      {/* History Snippet with Placeholder Slots */}
+      <div 
+        ref={scrollRef}
+        className="flex gap-2 overflow-x-auto pb-2 mb-1 text-xs text-slate-400 scrollbar-hide scroll-smooth"
+      >
+         {Array.from({ length: displayCount }).map((_, i) => {
+             const round = player.rounds[i];
+             const isTargetedSlot = i === targetIndex;
+
+             if (round) {
+                 return (
+                     <button 
+                        key={round.id || i} 
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onRoundClick(round, player.name, player.id, i + 1);
+                        }}
+                        className="bg-slate-900/50 hover:bg-slate-900 hover:text-emerald-400 w-8 h-7 flex items-center justify-center rounded border border-transparent hover:border-emerald-500/30 transition-colors cursor-pointer shrink-0 font-bold"
+                     >
+                       {calculateRoundScore(round, settings)}
+                     </button>
+                 );
+             } else {
+                 return (
+                     <button 
+                        key={`empty-${i}`}
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onManualEntry(player.id, undefined, undefined, i);
+                        }}
+                        className={`w-8 h-7 rounded flex items-center justify-center transition-all cursor-pointer shrink-0 border border-dashed ${
+                            isTargetedSlot 
+                            ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.3)] animate-pulse-slow' 
+                            : 'border-slate-600 bg-slate-900/20 text-slate-600 hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-400'
+                        }`}
+                        title={`Enter Score for Round ${i + 1}`}
+                     >
+                        <IconPlus className={`w-3 h-3 ${isTargetedSlot ? 'scale-110' : ''}`} />
+                     </button>
+                 );
+             }
+         })}
       </div>
 
       {/* Actions */}
       <div className="flex gap-2 mt-1 relative z-10">
           <button 
-              onClick={(e) => { e.stopPropagation(); onRequestScan(player.id); }}
+              onClick={(e) => { 
+                e.stopPropagation(); 
+                onRequestScan(player.id, undefined, targetIndex); 
+              }}
               className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border-emerald-600/20"
           >
               <IconCamera className="w-4 h-4" />
@@ -145,7 +209,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <button 
               onClick={(e) => {
                   e.stopPropagation();
-                  onManualEntry(player.id);
+                  onManualEntry(player.id, undefined, undefined, targetIndex);
               }}
               className="flex-1 flex items-center justify-center gap-2 bg-slate-700 text-slate-300 hover:bg-slate-600 py-2 rounded-lg transition-colors font-medium text-sm border border-slate-700/50"
           >
@@ -156,7 +220,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
           <button
               onClick={(e) => {
                   e.stopPropagation();
-                  onQuickZero?.(player.id);
+                  onQuickZero?.(player.id, targetIndex);
               }}
               className="w-11 flex items-center justify-center bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors font-black text-sm border border-slate-700/50"
               title="Add 0 points"

@@ -157,7 +157,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
       <div className="p-4 border-t border-slate-800 bg-slate-900/30 shrink-0 space-y-4">
         {round.type === 'scan' && (
           <div className="flex justify-between items-center px-2">
-            <span className="text-slate-400 font-semibold uppercase text-sm">Round Total</span>
+            <span className="text-slate-400 font-semibold uppercase text-sm">Score</span>
             <span className="text-2xl font-bold text-white">{calculateRoundScore(round, settings)}</span>
           </div>
         )}

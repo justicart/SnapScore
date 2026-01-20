@@ -41,7 +41,7 @@ export interface ScanResult {
 
 export type P2PMessage = 
   | { type: 'SYNC_STATE'; payload: GameState }
-  | { type: 'REQUEST_SAVE_ROUND'; payload: { playerId: string; round: Round } }
+  | { type: 'REQUEST_SAVE_ROUND'; payload: { playerId: string; round: Round; index?: number } }
   | { type: 'REQUEST_DELETE_ROUND'; payload: { playerId: string; roundId: string } }
   | { type: 'REQUEST_RESET'; payload: null }
   | { type: 'REQUEST_SETTINGS_UPDATE'; payload: CardSettings }

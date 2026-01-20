@@ -21,6 +21,7 @@ export const useGameState = (isClient: boolean) => {
   // Scanning State
   const [scanPlayerId, setScanPlayerId] = useState<string | null>(null);
   const [scanRoundId, setScanRoundId] = useState<string | null>(null);
+  const [targetRoundIndex, setTargetRoundIndex] = useState<number | null>(null);
 
   // --- Local Storage & Migration (Host Only) ---
   useEffect(() => {
@@ -65,7 +66,7 @@ export const useGameState = (isClient: boolean) => {
             }
         }
     }
-  }, []); // Only run once on mount (conceptually), but depend on empty array. isClient check protects logic.
+  }, []); 
 
   // Persist State
   useEffect(() => {
@@ -81,17 +82,32 @@ export const useGameState = (isClient: boolean) => {
   }, [settings, isClient]);
 
   // Actions
-  const updatePlayerRound = (playerId: string, round: Round) => {
+  const updatePlayerRound = (playerId: string, round: Round, index?: number) => {
     setPlayers(prev => prev.map(p => {
       if (p.id === playerId) {
-        const existingRoundIndex = p.rounds.findIndex(r => r.id === round.id);
-        let newRounds;
+        const newRounds = [...p.rounds];
         
-        if (existingRoundIndex >= 0) {
-            newRounds = [...p.rounds];
-            newRounds[existingRoundIndex] = round;
-        } else {
-            newRounds = [...p.rounds, round];
+        // 1. If explicit index is provided
+        if (typeof index === 'number') {
+            // Fill gaps with 0 manual rounds if needed
+            while (newRounds.length < index) {
+                newRounds.push({
+                    type: 'manual',
+                    id: uuidv4(),
+                    score: 0,
+                    timestamp: Date.now()
+                });
+            }
+            newRounds[index] = round;
+        } 
+        // 2. If no index, check if round ID exists to update
+        else {
+            const existingRoundIndex = newRounds.findIndex(r => r.id === round.id);
+            if (existingRoundIndex >= 0) {
+                newRounds[existingRoundIndex] = round;
+            } else {
+                newRounds.push(round);
+            }
         }
         
         return { ...p, rounds: newRounds };
@@ -121,7 +137,6 @@ export const useGameState = (isClient: boolean) => {
   };
 
   const resetRounds = () => {
-      // Save history before clearing
       if (players.length > 0) {
         try {
             localStorage.setItem('snapscore_last_game', JSON.stringify({ 
@@ -149,6 +164,7 @@ export const useGameState = (isClient: boolean) => {
       view, setView,
       scanPlayerId, setScanPlayerId,
       scanRoundId, setScanRoundId,
+      targetRoundIndex, setTargetRoundIndex,
       updatePlayerRound,
       deletePlayerRound,
       removePlayer,
