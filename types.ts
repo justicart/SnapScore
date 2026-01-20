@@ -34,16 +34,10 @@ export enum AppView {
 }
 
 export interface ScanResult {
-  cards: Omit<DetectedCard, 'id'>[]; // AI doesn't generate UUIDs, we add them later
+  cards: Omit<DetectedCard, 'id'>[]; 
 }
 
-// --- P2P / Multiplayer Types ---
-
-export type GameState = {
-  players: Player[];
-  settings: CardSettings;
-  view: AppView;
-};
+// --- Multiplayer / Durable Stream Protocol ---
 
 export type P2PMessage = 
   | { type: 'SYNC_STATE'; payload: GameState }
@@ -56,14 +50,20 @@ export type P2PMessage =
   | { type: 'HEARTBEAT'; payload: number }
   | { type: 'GAME_ENDED'; payload: null }
   | { type: 'ACK'; payload: { seq: number } }
-  | { type: 'RESYNC_QUERY'; payload: { lastReceivedSeq: number } }
-  | { type: 'RESYNC_RESPONSE'; payload: { lastReceivedSeq: number } };
+  | { type: 'RESYNC'; payload: { lastReceivedSeq: number } };
+
+export type GameState = {
+  players: Player[];
+  settings: CardSettings;
+  view: AppView;
+};
 
 /**
  * Durable Stream Protocol Envelope
+ * Ensures reliable delivery over unreliable DataConnections
  */
 export interface DurableEnvelope {
-  seq: number;
+  seq: number;       // 0 for control messages (ACK, HEARTBEAT), > 0 for data
   senderId: string;
   message: P2PMessage;
   timestamp: number;
