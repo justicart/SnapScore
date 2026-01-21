@@ -4,10 +4,15 @@ import { Player, CardSettings, ScanResult, DetectedCard, Round } from '../types'
 import { Button } from '../components/Button';
 import { IconCamera, IconChevronLeft, IconCheck, IconPhoto, IconX, IconTrash, IconPencil, IconPlus } from '../components/Icons';
 import { analyzeHand } from '../services/geminiService';
-import { calculateCardScore } from '../utils/scoringUtils';
+import { calculateCardScore, calculateRoundScore } from '../utils/scoringUtils';
 import { v4 as uuidv4 } from 'uuid';
 
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', 'Joker'];
+const RANKS = [
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 
+  'J', 'Q', 'K', 'A', 'Joker', 
+  '+1', '+2', '+5', '+10', 
+  'x2', 'x3'
+];
 const SUITS = ['Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'];
 
 interface ScanViewProps {
@@ -25,11 +30,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
   const [result, setResult] = useState<ScanResult | null>(null);
   const [fullCards, setFullCards] = useState<DetectedCard[]>([]);
   const [error, setError] = useState<string | null>(null);
-  
-  // Edit state
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
-  
-  // Camera states
   const [isCameraMode, setIsCameraMode] = useState(true);
   const [cameraError, setCameraError] = useState(false);
   const [isMirrored, setIsMirrored] = useState(false);
@@ -39,7 +40,6 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
   const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Initialize Camera
   useEffect(() => {
     if (image || !isCameraMode) {
       stopCamera();
@@ -120,7 +120,6 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
     try {
       const data = await analyzeHand(base64);
       setResult(data);
-      // Hydrate with UUIDs
       const cardsWithIds = data.cards.map(c => ({ ...c, id: uuidv4() }));
       setFullCards(cardsWithIds);
     } catch (err) {
@@ -151,9 +150,8 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
     setEditingCardId(null);
   };
 
-  // Edit Handlers
   const handleAddCard = () => {
-      const newCard: DetectedCard = { id: uuidv4(), rank: 'A', suit: 'Spades' };
+      const newCard: DetectedCard = { id: uuidv4(), rank: '1', suit: 'None' };
       setFullCards([...fullCards, newCard]);
       setEditingCardId(newCard.id);
   };
@@ -166,8 +164,9 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
       setFullCards(fullCards.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
 
-  // Calculate current values based on settings
-  const calculatedTotal = fullCards.reduce((sum, card) => sum + calculateCardScore(card, settings), 0);
+  // Calculate total using the updated round logic
+  const tempRound: Round = { type: 'scan', id: 'temp', cards: fullCards, timestamp: 0 };
+  const calculatedTotal = calculateRoundScore(tempRound, settings);
 
   if (!image) {
     return (
@@ -236,7 +235,12 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
                     <h3 className="text-sm text-slate-400 font-semibold uppercase tracking-wider">
                       {targetIndex !== undefined ? `Round ${targetIndex + 1} Score` : 'Score'}
                     </h3>
-                    <span className="text-5xl font-black text-emerald-400">{calculatedTotal}</span>
+                    <div className="flex items-center gap-2">
+                        <span className="text-5xl font-black text-emerald-400">{calculatedTotal}</span>
+                        {fullCards.some(c => c.rank.toLowerCase().startsWith('x')) && (
+                            <span className="text-emerald-500/50 text-xs font-bold bg-emerald-500/10 px-2 py-1 rounded-full uppercase tracking-tighter">Multiplied</span>
+                        )}
+                    </div>
                 </div>
                 <div className="text-right pb-2">
                     <span className="text-xs text-slate-500 block uppercase tracking-wider mb-1">Found</span>
@@ -252,7 +256,11 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
                     Breakdown
                 </h4>
                 <ul className="space-y-2 flex-1">
-                    {fullCards.map((card) => (
+                    {fullCards.map((card) => {
+                        const isMultiplier = card.rank.toLowerCase().startsWith('x');
+                        const isAdditive = card.rank.toLowerCase().startsWith('+');
+                        
+                        return (
                         <li key={card.id} className="flex justify-between items-center text-slate-200 border-b border-slate-700/30 last:border-0 pb-2 last:pb-0 min-h-[48px]">
                             {editingCardId === card.id ? (
                                 <div className="flex items-center gap-2 flex-1">
@@ -271,51 +279,34 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
                                     >
                                         {SUITS.map(s => <option key={s} value={s}>{s}</option>)}
                                     </select>
-                                    <button 
-                                        onClick={() => setEditingCardId(null)}
-                                        className="p-1.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-                                    >
-                                        <IconCheck className="w-4 h-4" />
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDeleteCard(card.id)}
-                                        className="p-1.5 rounded bg-slate-700 text-slate-400 hover:text-red-400 hover:bg-slate-600 ml-1"
-                                    >
-                                        <IconTrash className="w-4 h-4" />
-                                    </button>
+                                    <button onClick={() => setEditingCardId(null)} className="p-1.5 rounded bg-emerald-500/20 text-emerald-400"><IconCheck className="w-4 h-4" /></button>
+                                    <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 rounded bg-slate-700 text-slate-400 hover:text-red-400 ml-1"><IconTrash className="w-4 h-4" /></button>
                                 </div>
                             ) : (
                                 <>
                                     <div className="flex-1 flex items-baseline gap-2">
-                                        <span className="text-xl font-black text-white">{card.rank}</span>
-                                        {card.suit !== 'None' && (
-                                            <span className="text-sm font-medium text-emerald-100/60">{card.suit}</span>
-                                        )}
+                                        <span className={`text-xl font-black ${isMultiplier ? 'text-gold-400' : isAdditive ? 'text-emerald-400' : 'text-white'}`}>{card.rank}</span>
+                                        {card.suit !== 'None' && <span className="text-sm font-medium text-emerald-100/60">{card.suit}</span>}
                                     </div>
                                     <div className="flex items-center gap-3">
-                                        <span className="text-sm font-mono text-emerald-400">+{calculateCardScore(card, settings)}</span>
+                                        <span className={`text-sm font-mono ${isMultiplier ? 'text-gold-400 font-bold' : 'text-emerald-400'}`}>
+                                            {isMultiplier ? `${card.rank} MOD` : `+${calculateCardScore(card, settings)}`}
+                                        </span>
                                         <div className="flex gap-1">
-                                            <button onClick={() => setEditingCardId(card.id)} className="p-1 text-slate-500 hover:text-white">
-                                                <IconPencil className="w-4 h-4" />
-                                            </button>
-                                            <button onClick={() => handleDeleteCard(card.id)} className="p-1 text-slate-500 hover:text-red-400">
-                                                <IconTrash className="w-4 h-4" />
-                                            </button>
+                                            <button onClick={() => setEditingCardId(card.id)} className="p-1 text-slate-500 hover:text-white"><IconPencil className="w-4 h-4" /></button>
+                                            <button onClick={() => handleDeleteCard(card.id)} className="p-1 text-slate-500 hover:text-red-400"><IconTrash className="w-4 h-4" /></button>
                                         </div>
                                     </div>
                                 </>
                             )}
                         </li>
-                    ))}
+                        );
+                    })}
                 </ul>
                 <div className="pt-3 mt-2">
                     <Button variant="ghost" fullWidth onClick={handleAddCard} className="border-2 border-dashed border-slate-700 hover:border-slate-600 py-2 text-sm">
                         <IconPlus className="w-4 h-4 mr-2" /> Add Card
                     </Button>
-                </div>
-                <div className="mt-4 pt-3 border-t border-slate-600 flex justify-between items-center">
-                    <span className="text-slate-400 font-semibold uppercase text-xs">Score</span>
-                    <span className="text-xl font-bold text-white">{calculatedTotal}</span>
                 </div>
              </div>
 

@@ -1,96 +1,38 @@
 
-import { GoogleGenAI, Type, Schema } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 import { ScanResult } from "../types";
 
 const SYSTEM_PROMPT = `
-    You are an expert card game assistant. Your task is to accurately identify and list every playing card visible in the provided image.
+    You are an expert card game assistant. Your task is to accurately identify and list every unique physical playing card visible in the provided image.
 
-    STRATEGY:
-    1. Scan the image methodically (e.g., from top-left to bottom-right).
-    2. Pay close attention to **overlapping cards** or "fanned" hands. Look for visible indices (numbers/letters and suit symbols) in the corners even if the rest of the card is hidden.
-    3. Count the cards you see to ensure you don't miss any in a sequence.
-    4. If a card is partially obscured but identifiable, include it.
+    SPECIAL CARDS (Operation Cards):
+    In some games (like Flip 7), cards have operators instead of just numbers.
+    - **Additive Cards**: If a card has a "+" followed by a number (e.g., +2, +10), set Rank to that string (e.g., "+2") and Suit to "None".
+    - **Multiplicative Cards**: If a card has an "x" followed by a number (e.g., x2), set Rank to that string (e.g., "x2") and Suit to "None".
+    - **Number Cards**: Identify standard numbers (0-12 are common in Flip 7).
+
+    CRITICAL REASONING TO PREVENT DOUBLE-COUNTING:
+    1. **Dual Indices Awareness**: Standard playing cards have rank and suit indices in at least two corners. YOU MUST NOT record these as two separate cards.
+    2. **Physical Object Detection**: Focus on identifying distinct pieces of physical card stock.
+    3. **Fanned Hand Analysis**: Only the top edges/corners of overlapping cards are fully visible. The bottom index of the final card is often the same card's opposite end; ignore it.
 
     INSTRUCTIONS:
-    1. Return the Rank and Suit for each card.
-    2. **CRITICAL**: Identify specific Jokers. 
+    1. Return the Rank and Suit for each unique card detected.
+    2. Rank: '0'-'12', 'J', 'Q', 'K', 'A', 'Joker', '+1', '+2', '+5', '+10', 'x2', 'x3'.
+    3. Suit: 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'.
+    4. **CRITICAL: Identify specific Jokers.** 
        - Cards with '$' or 'S' in the corner are Jokers.
-       - Cards explicitly labeled JOKER are Jokers.
-    
-    FORMAT:
-    - Rank: Use '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', or 'Joker'.
-    - Suit: Use 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'.
+       - Cards explicitly labeled 'JOKER' are Jokers.
+       - For Jokers, set Rank: 'Joker' and Suit: 'None'.
 `;
-
-const responseSchema: Schema = {
-  type: Type.OBJECT,
-  properties: {
-    cards: {
-      type: Type.ARRAY,
-      items: {
-        type: Type.OBJECT,
-        properties: {
-            rank: { type: Type.STRING, description: "Rank of the card (e.g., 'A', '10', 'K', 'Joker')" },
-            suit: { type: Type.STRING, description: "Suit of the card (e.g., 'Hearts', 'Stars', 'None')" }
-        },
-        required: ["rank", "suit"]
-      },
-      description: "A list of the detected cards."
-    }
-  },
-  required: ["cards"]
-};
-
-const getApiKey = (): string | undefined => {
-  let key: string | undefined = undefined;
-
-  // 1. Try process.env.API_KEY (System Standard)
-  // We use a safe check to avoid ReferenceError in browsers where 'process' is not defined
-  try {
-    // @ts-ignore
-    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
-      // @ts-ignore
-      key = process.env.API_KEY;
-    }
-  } catch (e) {
-    // Ignore process errors
-  }
-
-  // 2. Try Vite Environment Variables (User Standard)
-  // If no key found yet, check import.meta.env
-  if (!key) {
-    try {
-      // @ts-ignore
-      if (typeof import.meta !== 'undefined' && import.meta.env) {
-        // @ts-ignore
-        if (import.meta.env.VITE_GEMINI_API_KEY) key = import.meta.env.VITE_GEMINI_API_KEY;
-        // @ts-ignore
-        else if (import.meta.env.VITE_API_KEY) key = import.meta.env.VITE_API_KEY;
-      }
-    } catch (e) {
-      // Ignore meta errors
-    }
-  }
-
-  return key;
-};
 
 export const analyzeHand = async (base64Image: string): Promise<ScanResult> => {
   try {
-    const apiKey = getApiKey();
-
-    if (!apiKey) {
-      console.error("Gemini API Key is missing. Ensure VITE_GEMINI_API_KEY is set in Netlify.");
-      throw new Error("API Key not configured");
-    }
-
-    // Normalize base64 string (remove data URL prefix if present)
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
 
-    const ai = new GoogleGenAI({ apiKey });
-    
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
+      model: 'gemini-3-flash-preview',
       contents: {
         parts: [
           {
@@ -106,20 +48,34 @@ export const analyzeHand = async (base64Image: string): Promise<ScanResult> => {
       },
       config: {
         responseMimeType: "application/json",
-        responseSchema: responseSchema,
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            cards: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                    rank: { type: Type.STRING, description: "Rank of the card (e.g., '10', '+2', 'x2', 'Joker')" },
+                    suit: { type: Type.STRING, description: "Suit of the card (e.g., 'Hearts', 'None')" }
+                },
+                required: ["rank", "suit"]
+              },
+              description: "A list of the unique detected cards."
+            }
+          },
+          required: ["cards"]
+        },
         temperature: 0.1,
         thinkingConfig: {
-          thinkingBudget: 2048 // Allocating token budget for better reasoning on dense images
+          thinkingBudget: 2048
         }
       }
     });
 
-    if (!response.text) {
-        throw new Error("No response from AI");
-    }
-
-    const result = JSON.parse(response.text) as ScanResult;
-    return result;
+    const text = response.text;
+    if (!text) throw new Error("Empty response from AI");
+    return JSON.parse(text.trim()) as ScanResult;
 
   } catch (error) {
     console.error("Gemini Analysis Error:", error);

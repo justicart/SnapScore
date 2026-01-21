@@ -6,7 +6,12 @@ import { IconX, IconPlus, IconCheck, IconTrash, IconPencil, IconCamera } from '.
 import { calculateRoundScore, calculateCardScore } from '../../utils/scoringUtils';
 import { v4 as uuidv4 } from 'uuid';
 
-const RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', 'Joker'];
+const RANKS = [
+  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 
+  'J', 'Q', 'K', 'A', 'Joker', 
+  '+1', '+2', '+5', '+10', 
+  'x2', 'x3'
+];
 const SUITS = ['Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'];
 
 interface RoundDetailsModalProps {
@@ -55,7 +60,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
 
   const addCard = () => {
     if (round.type === 'scan') {
-      const newCard: DetectedCard = { id: uuidv4(), rank: 'A', suit: 'Spades' };
+      const newCard: DetectedCard = { id: uuidv4(), rank: '1', suit: 'None' };
       onChange({ ...round, cards: [...round.cards, newCard] });
       setEditingCardId(newCard.id);
     }
@@ -63,7 +68,6 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-[60] bg-felt-900 flex flex-col w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800">
-      {/* Header */}
       <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
         <div>
           <h3 className="text-lg font-bold text-white">Round {roundIndex}</h3>
@@ -74,7 +78,6 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
         </button>
       </div>
 
-      {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         {round.type === 'manual' ? (
           <div className="flex flex-col items-center justify-center h-full text-center py-12">
@@ -83,144 +86,86 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
             </div>
             <p className="text-slate-400 mb-2">Manual Entry</p>
             <p className="text-6xl font-bold text-emerald-400">{round.score}</p>
-            <p className="text-sm text-slate-500 mt-2">Points added manually</p>
           </div>
         ) : (
           <div>
             <ul className="space-y-2">
-              {round.cards.map((card) => (
-                <li key={card.id} className="flex justify-between items-center bg-slate-800/50 p-2 rounded-lg border border-slate-700/50 min-h-[48px]">
-                  {editingCardId === card.id ? (
-                    <div className="flex items-center gap-2 flex-1">
-                      <select 
-                        value={card.rank} 
-                        onChange={(e) => updateCard(card.id, 'rank', e.target.value)}
-                        className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 focus:border-emerald-500 outline-none w-16 text-center"
-                      >
-                        {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
-                      </select>
-                      <span className="text-slate-500 text-xs">of</span>
-                      <select 
-                        value={card.suit} 
-                        onChange={(e) => updateCard(card.id, 'suit', e.target.value)}
-                        className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 focus:border-emerald-500 outline-none flex-1"
-                      >
-                        {SUITS.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      <button 
-                        onClick={() => setEditingCardId(null)}
-                        className="p-1.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
-                      >
-                        <IconCheck className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => deleteCard(card.id)}
-                        className="p-1.5 rounded bg-slate-700 text-slate-400 hover:text-red-400 hover:bg-slate-600 ml-1"
-                      >
-                        <IconTrash className="w-4 h-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex-1 ml-2 flex items-baseline gap-2">
-                        <span className="text-xl font-black text-white">{card.rank}</span>
-                        {card.suit !== 'None' && (
-                          <span className="text-sm font-medium text-emerald-100/60">{card.suit}</span>
-                        )}
+              {round.cards.map((card) => {
+                const isMultiplier = card.rank.toLowerCase().startsWith('x');
+                const isAdditive = card.rank.toLowerCase().startsWith('+');
+                return (
+                  <li key={card.id} className="flex justify-between items-center bg-slate-800/50 p-2 rounded-lg border border-slate-700/50 min-h-[48px]">
+                    {editingCardId === card.id ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <select 
+                          value={card.rank} 
+                          onChange={(e) => updateCard(card.id, 'rank', e.target.value)}
+                          className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 outline-none w-16 text-center"
+                        >
+                          {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                        </select>
+                        <select 
+                          value={card.suit} 
+                          onChange={(e) => updateCard(card.id, 'suit', e.target.value)}
+                          className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 outline-none flex-1"
+                        >
+                          {SUITS.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <button onClick={() => setEditingCardId(null)} className="p-1.5 rounded bg-emerald-500/20 text-emerald-400"><IconCheck className="w-4 h-4" /></button>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-base font-mono font-bold text-emerald-400">+{calculateCardScore(card, settings)}</span>
-                        <div className="flex gap-1">
-                          <button onClick={() => setEditingCardId(card.id)} className="p-1 text-slate-500 hover:text-white">
-                            <IconPencil className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => deleteCard(card.id)} className="p-1 text-slate-500 hover:text-red-400">
-                            <IconTrash className="w-4 h-4" />
-                          </button>
+                    ) : (
+                      <>
+                        <div className="flex-1 ml-2 flex items-baseline gap-2">
+                          <span className={`text-xl font-black ${isMultiplier ? 'text-gold-400' : isAdditive ? 'text-emerald-400' : 'text-white'}`}>{card.rank}</span>
+                          {card.suit !== 'None' && <span className="text-sm font-medium text-emerald-100/60">{card.suit}</span>}
                         </div>
-                      </div>
-                    </>
-                  )}
-                </li>
-              ))}
+                        <div className="flex items-center gap-3">
+                          <span className={`text-base font-mono font-bold ${isMultiplier ? 'text-gold-400' : 'text-emerald-400'}`}>
+                              {isMultiplier ? `${card.rank} MOD` : `+${calculateCardScore(card, settings)}`}
+                          </span>
+                          <div className="flex gap-1">
+                            <button onClick={() => setEditingCardId(card.id)} className="p-1 text-slate-500 hover:text-white"><IconPencil className="w-4 h-4" /></button>
+                            <button onClick={() => deleteCard(card.id)} className="p-1 text-slate-500 hover:text-red-400"><IconTrash className="w-4 h-4" /></button>
+                          </div>
+                        </div>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
-            <div className="pt-3 mt-2">
-              <Button variant="ghost" fullWidth onClick={addCard} className="border-2 border-dashed border-slate-700 hover:border-slate-600 py-2 text-sm">
-                <IconPlus className="w-4 h-4 mr-2" /> Add Card
-              </Button>
+            <div className="pt-3">
+              <Button variant="ghost" fullWidth onClick={addCard} className="border-2 border-dashed border-slate-700 py-2"><IconPlus className="w-4 h-4 mr-2" /> Add Card</Button>
             </div>
           </div>
         )}
       </div>
 
-      {/* Footer */}
       <div className="p-4 border-t border-slate-800 bg-slate-900/30 shrink-0 space-y-4">
-        {round.type === 'scan' && (
-          <div className="flex justify-between items-center px-2">
-            <span className="text-slate-400 font-semibold uppercase text-sm">Score</span>
-            <span className="text-2xl font-bold text-white">{calculateRoundScore(round, settings)}</span>
-          </div>
-        )}
-
+        <div className="flex justify-between items-center px-2">
+          <span className="text-slate-400 font-semibold uppercase text-sm">Total Score</span>
+          <span className="text-2xl font-bold text-white">{calculateRoundScore(round, settings)}</span>
+        </div>
         <div className="flex gap-3">
-          <Button 
-            variant="danger" 
-            onClick={() => setShowDeleteConfirm(true)}
-            className="px-4"
-            title="Delete Score"
-          >
-            <IconTrash className="w-5 h-5" />
-          </Button>
-
+          <Button variant="danger" onClick={() => setShowDeleteConfirm(true)} className="px-4"><IconTrash className="w-5 h-5" /></Button>
           {round.type === 'manual' ? (
-            <Button 
-              variant="secondary" 
-              fullWidth
-              onClick={onEditScoreManual}
-            >
-              Edit Score
-            </Button>
+            <Button variant="secondary" fullWidth onClick={onEditScoreManual}>Edit Score</Button>
           ) : (
             <div className="flex-1 grid grid-cols-2 gap-3">
-              <Button 
-                variant="soft"
-                onClick={onRequestScan}
-              >
-                <IconCamera className="w-4 h-4 mr-2 shrink-0" />
-                Rescan
-              </Button>
-              <Button 
-                variant="primary" 
-                onClick={onSave}
-              >
-                Save
-              </Button>
+              <Button variant="soft" onClick={onRequestScan}><IconCamera className="w-4 h-4 mr-2" /> Rescan</Button>
+              <Button variant="primary" onClick={onSave}>Save</Button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Delete Confirmation Overlay */}
       {showDeleteConfirm && (
         <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
-            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6">
+            <div className="bg-slate-800 w-full max-w-xs rounded-2xl p-6">
                 <h4 className="text-xl font-bold text-white mb-2">Delete Score?</h4>
-                <p className="text-slate-400 mb-6 text-sm">
-                    This round will be permanently removed from <span className="text-emerald-400 font-bold">{playerName}</span>'s total.
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                    <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>
-                        Cancel
-                    </Button>
-                    <Button 
-                      variant="danger" 
-                      onClick={() => {
-                        if (onDelete) onDelete();
-                        setShowDeleteConfirm(false);
-                      }}
-                    >
-                      Delete
-                    </Button>
+                <div className="grid grid-cols-2 gap-3 mt-6">
+                    <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+                    <Button variant="danger" onClick={() => { onDelete?.(); setShowDeleteConfirm(false); }}>Delete</Button>
                 </div>
             </div>
         </div>
