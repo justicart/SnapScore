@@ -42,7 +42,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
         <h2 className="text-lg font-bold ml-2">Game Rules</h2>
       </div>
 
-      <div className="p-6 space-y-8 overflow-y-auto flex-1">
+      <div className="p-6 space-y-10 overflow-y-auto flex-1">
         
         {/* Presets */}
         <div className="space-y-3">
@@ -211,7 +211,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
                 </div>
             </div>
         ) : (
-            <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-xl animate-in slide-in-from-bottom-2 duration-300">
+            <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex items-center gap-2 text-emerald-400 mb-2">
                     <IconStar className="w-5 h-5" />
                     <span className="font-bold uppercase tracking-widest text-sm">Preset Active</span>
@@ -222,8 +222,38 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
             </div>
         )}
 
+        <hr className="border-slate-800" />
+
+        {/* Advanced AI Toggle (Moved to bottom) */}
+        <div className="space-y-3">
+            <label className="block text-sm font-medium text-emerald-400 uppercase tracking-widest">Vision Engine</label>
+            <button
+                onClick={() => handleChange('useGambit', !formData.useGambit)}
+                className={`w-full flex justify-between items-center p-4 rounded-xl border-2 transition-all ${
+                    formData.useGambit 
+                    ? 'bg-emerald-500/10 border-emerald-500 shadow-lg shadow-emerald-500/10' 
+                    : 'bg-slate-800 border-slate-700'
+                }`}
+            >
+                <div className="text-left">
+                    <span className={`block font-bold ${formData.useGambit ? 'text-white' : 'text-slate-300'}`}>
+                        Advanced AI Mode (Gambit)
+                    </span>
+                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tight">
+                        {formData.useGambit ? 'Enabled: Multi-turn verification' : 'Disabled: Single-shot prompt'}
+                    </span>
+                </div>
+                <div className={`w-12 h-6 rounded-full relative transition-colors ${formData.useGambit ? 'bg-emerald-500' : 'bg-slate-600'}`}>
+                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.useGambit ? 'left-7' : 'left-1'}`} />
+                </div>
+            </button>
+            <p className="text-[10px] text-slate-500 px-1">
+                Advanced Mode uses more tokens but verifies complex scoring rules (like Gnoming rows) before finalizing the result. Recommended for complex games.
+            </p>
+        </div>
+
         {isClient && onLeave && (
-            <div className="pt-6 border-t border-slate-700/50 mt-4">
+            <div className="pt-2">
                  <Button variant="danger" fullWidth onClick={onLeave}>
                      Disconnect & Leave Game
                  </Button>

@@ -9,7 +9,7 @@ export type GamePreset = 'standard' | 'flip7' | 'gnoming_around';
 
 export type Round = 
   | { type: 'manual'; id: string; score: number; timestamp: number }
-  | { type: 'scan'; id: string; cards: DetectedCard[]; timestamp: number; wentOutFirst?: boolean; lowestInRound?: boolean };
+  | { type: 'scan'; id: string; cards: DetectedCard[]; timestamp: number; wentOutFirst?: boolean; lowestInRound?: boolean; calculationDurationMs?: number };
 
 export interface Player {
   id: string;
@@ -27,6 +27,7 @@ export interface CardSettings {
   numberCardBehavior: 'face' | 'fixed';
   fixedNumberValue?: number;
   winningScoreType: 'lowest' | 'highest';
+  useGambit?: boolean; // New: Advanced AI logic toggle
 }
 
 export enum AppView {

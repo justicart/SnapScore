@@ -11,7 +11,8 @@ export const DEFAULT_SETTINGS: CardSettings = {
   fixedFaceValue: 10,
   numberCardBehavior: 'face',
   fixedNumberValue: 5,
-  winningScoreType: 'lowest'
+  winningScoreType: 'lowest',
+  useGambit: false // Default to standard single prompt
 };
 
 export const useGameState = (isClient: boolean) => {

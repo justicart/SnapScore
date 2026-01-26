@@ -30,6 +30,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
   const [isProcessing, setIsProcessing] = useState(false);
   const [fullCards, setFullCards] = useState<DetectedCard[]>([]);
   const [wentOutFirst, setWentOutFirst] = useState(false);
+  const [calculationDuration, setCalculationDuration] = useState<number | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [isCameraMode, setIsCameraMode] = useState(true);
@@ -47,6 +48,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
       if (existing && existing.type === 'scan') {
         setFullCards(existing.cards);
         setWentOutFirst(!!existing.wentOutFirst);
+        setCalculationDuration(existing.calculationDurationMs);
       }
     }
   }, [existingRoundId, player.rounds]);
@@ -128,8 +130,11 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
   const processImage = async (base64: string) => {
     setIsProcessing(true);
     setError(null);
+    const startTime = performance.now();
     try {
-      const data = await analyzeHand(base64, settings.preset);
+      const data = await analyzeHand(base64, settings);
+      const endTime = performance.now();
+      setCalculationDuration(endTime - startTime);
       const cardsWithIds = data.cards.map(c => ({ ...c, id: uuidv4() }));
       setFullCards(cardsWithIds);
     } catch (err) {
@@ -146,7 +151,8 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
             id: existingRoundId || uuidv4(), 
             cards: fullCards,
             wentOutFirst,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            calculationDurationMs: calculationDuration
         };
         onComplete(round, targetIndex);
     }
@@ -158,6 +164,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
     setError(null);
     setIsCameraMode(true);
     setEditingCardId(null);
+    setCalculationDuration(undefined);
   };
 
   const handleAddCard = () => {

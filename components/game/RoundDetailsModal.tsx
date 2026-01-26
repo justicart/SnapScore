@@ -100,7 +100,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
             <p className="text-6xl font-bold text-emerald-400">{round.score}</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 pb-6">
             {isGnoming && round.cards.length === 9 ? (
                 <div className="space-y-4">
                     <h4 className="text-xs text-slate-500 uppercase font-bold text-center tracking-widest">3x3 Grid Layout</h4>
@@ -267,6 +267,15 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
                         </p>
                     )}
                 </div>
+            )}
+
+            {round.calculationDurationMs !== undefined && (
+              <div className="flex flex-col items-center justify-center pt-4 opacity-40 hover:opacity-100 transition-opacity">
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-1">Vision Analysis</p>
+                <p className="text-xs text-slate-400 font-mono">
+                  {(round.calculationDurationMs / 1000).toFixed(2)} seconds to calculate
+                </p>
+              </div>
             )}
           </div>
         )}
