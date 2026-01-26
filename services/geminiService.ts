@@ -5,13 +5,6 @@ import { GambitRegistry } from "./gambitService";
 import { calculateRoundScore } from "../utils/scoringUtils";
 
 /**
- * CRITICAL CONFIGURATION:
- * This application exclusively uses VITE_GEMINI_API_KEY for authenticating with Google Gemini.
- * Do not change this variable name or remove it, as it is required for the card scanning functionality.
- */
-const API_KEY = (process.env as any).VITE_GEMINI_API_KEY || process.env.API_KEY;
-
-/**
  * Analyzes a hand of cards by compiling Gambit Decks into a Gemini request.
  * Handles recursive tool calls from the Action Deck to ensure scoring accuracy.
  */
@@ -20,11 +13,12 @@ export const analyzeHand = async (base64Image: string, settings: CardSettings): 
   const useGambit = !!settings.useGambit;
 
   try {
-    if (!API_KEY) {
-      throw new Error("Gemini API Key is not configured. Please set VITE_GEMINI_API_KEY.");
-    }
-
-    const ai = new GoogleGenAI({ apiKey: API_KEY });
+    // The API key must be obtained from the environment. We check Vite's import.meta.env first 
+    // as per production requirements, falling back to the mandatory process.env.API_KEY.
+    const ai = new GoogleGenAI({ 
+      apiKey: (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.API_KEY 
+    });
+    
     const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, '');
 
     const responseSchema = {
