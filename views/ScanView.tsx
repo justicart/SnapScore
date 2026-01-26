@@ -41,15 +41,12 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
   const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Initialize from existing round if provided
   useEffect(() => {
     if (existingRoundId) {
       const existing = player.rounds.find(r => r.id === existingRoundId);
       if (existing && existing.type === 'scan') {
         setFullCards(existing.cards);
         setWentOutFirst(!!existing.wentOutFirst);
-        // We don't have the original image, so we stay in camera/upload mode
-        // unless identifying a new image.
       }
     }
   }, [existingRoundId, player.rounds]);
@@ -72,8 +69,8 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
         }
         streamRef.current = stream;
         const track = stream.getVideoTracks()[0];
-        const settings = track.getSettings();
-        setIsMirrored(settings.facingMode !== 'environment');
+        const videoSettings = track.getSettings();
+        setIsMirrored(videoSettings.facingMode !== 'environment');
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           try { await videoRef.current.play(); } catch (e) { console.warn(e); }
@@ -132,7 +129,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
     setIsProcessing(true);
     setError(null);
     try {
-      const data = await analyzeHand(base64);
+      const data = await analyzeHand(base64, settings.preset);
       const cardsWithIds = data.cards.map(c => ({ ...c, id: uuidv4() }));
       setFullCards(cardsWithIds);
     } catch (err) {
