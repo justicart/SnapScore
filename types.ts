@@ -1,13 +1,15 @@
 
 export interface DetectedCard {
-  rank: string; // '2'-'10', 'J', 'Q', 'K', 'A', 'Joker'
+  rank: string; // '2'-'10', 'J', 'Q', 'K', 'A', 'Joker', '+2', 'x2', '-2', 'Star'
   suit: string; // 'Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'
   id: string;   // Unique ID for React keys
 }
 
+export type GamePreset = 'standard' | 'flip7' | 'gnoming_around';
+
 export type Round = 
   | { type: 'manual'; id: string; score: number; timestamp: number }
-  | { type: 'scan'; id: string; cards: DetectedCard[]; timestamp: number };
+  | { type: 'scan'; id: string; cards: DetectedCard[]; timestamp: number; wentOutFirst?: boolean; lowestInRound?: boolean };
 
 export interface Player {
   id: string;
@@ -17,12 +19,13 @@ export interface Player {
 }
 
 export interface CardSettings {
+  preset: GamePreset;
   jokerValue: number;
   aceValue: number;
-  faceCardBehavior: 'face' | 'fixed'; // 'face' means J=11, Q=12, K=13
-  fixedFaceValue?: number; // Used if faceCardBehavior is 'fixed'
-  numberCardBehavior: 'face' | 'fixed'; // 'face' means 2=2, 10=10
-  fixedNumberValue?: number; // Used if numberCardBehavior is 'fixed'
+  faceCardBehavior: 'face' | 'fixed'; 
+  fixedFaceValue?: number;
+  numberCardBehavior: 'face' | 'fixed';
+  fixedNumberValue?: number;
   winningScoreType: 'lowest' | 'highest';
 }
 
@@ -36,8 +39,6 @@ export enum AppView {
 export interface ScanResult {
   cards: Omit<DetectedCard, 'id'>[]; 
 }
-
-// --- Multiplayer / Durable Stream Protocol ---
 
 export type P2PMessage = 
   | { type: 'SYNC_STATE'; payload: GameState }
@@ -58,12 +59,8 @@ export type GameState = {
   view: AppView;
 };
 
-/**
- * Durable Stream Protocol Envelope
- * Ensures reliable delivery over unreliable DataConnections
- */
 export interface DurableEnvelope {
-  seq: number;       // 0 for control messages (ACK, HEARTBEAT), > 0 for data
+  seq: number;
   senderId: string;
   message: P2PMessage;
   timestamp: number;

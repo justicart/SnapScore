@@ -4,6 +4,7 @@ import { Player, CardSettings, AppView, Round } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 
 export const DEFAULT_SETTINGS: CardSettings = {
+  preset: 'standard',
   jokerValue: 50,
   aceValue: 20,
   faceCardBehavior: 'fixed',
@@ -34,7 +35,6 @@ export const useGameState = (isClient: boolean) => {
                 const parsed = JSON.parse(savedPlayers);
                 const migratedPlayers: Player[] = parsed.map((p: any) => {
                     if (p.rounds) return { ...p, deviceId: p.deviceId }; // Keep deviceId
-                    // Migration for old format
                     const rounds: Round[] = (p.history || []).map((score: number) => ({
                         type: 'manual',
                         id: uuidv4(),
@@ -56,9 +56,6 @@ export const useGameState = (isClient: boolean) => {
                 const migratedSettings: CardSettings = {
                     ...DEFAULT_SETTINGS,
                     ...parsed,
-                    fixedFaceValue: parsed.fixedFaceValue ?? parsed.faceValue ?? DEFAULT_SETTINGS.fixedFaceValue,
-                    faceCardBehavior: parsed.faceCardBehavior ?? DEFAULT_SETTINGS.faceCardBehavior,
-                    winningScoreType: parsed.winningScoreType ?? DEFAULT_SETTINGS.winningScoreType
                 };
                 setSettings(migratedSettings);
             } catch (e) {
@@ -81,15 +78,12 @@ export const useGameState = (isClient: boolean) => {
     }
   }, [settings, isClient]);
 
-  // Actions
   const updatePlayerRound = (playerId: string, round: Round, index?: number) => {
     setPlayers(prev => prev.map(p => {
       if (p.id === playerId) {
         const newRounds = [...p.rounds];
         
-        // 1. If explicit index is provided
         if (typeof index === 'number') {
-            // Fill gaps with 0 manual rounds if needed
             while (newRounds.length < index) {
                 newRounds.push({
                     type: 'manual',
@@ -99,9 +93,7 @@ export const useGameState = (isClient: boolean) => {
                 });
             }
             newRounds[index] = round;
-        } 
-        // 2. If no index, check if round ID exists to update
-        else {
+        } else {
             const existingRoundIndex = newRounds.findIndex(r => r.id === round.id);
             if (existingRoundIndex >= 0) {
                 newRounds[existingRoundIndex] = round;

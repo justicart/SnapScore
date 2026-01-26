@@ -157,7 +157,7 @@ export const GameView: React.FC<GameViewProps> = ({
   let winningPlayerIds = new Set<string>();
 
   if (allPlayersHavePlayed) {
-    const playerTotals = players.map(p => ({ id: p.id, total: calculatePlayerTotal(p, settings) }));
+    const playerTotals = players.map(p => ({ id: p.id, total: calculatePlayerTotal(p, settings, players) }));
     const totals = playerTotals.map(pt => pt.total);
     const targetScore = settings.winningScoreType === 'highest' 
         ? Math.max(...totals) 
@@ -359,6 +359,7 @@ export const GameView: React.FC<GameViewProps> = ({
           playerId={activeRoundPlayerId}
           roundIndex={activeRoundIndex}
           settings={settings}
+          players={players}
           onChange={setActiveRound}
           onSave={handleRoundSave}
           onDelete={handleRoundDelete}
@@ -371,7 +372,7 @@ export const GameView: React.FC<GameViewProps> = ({
           }}
           onEditScoreManual={() => {
               if (activeRoundPlayerId && activeRound) {
-                  openManualEntry(activeRoundPlayerId, activeRound.id, calculateRoundScore(activeRound, settings), activeRoundIndex ? activeRoundIndex - 1 : undefined);
+                  openManualEntry(activeRoundPlayerId, activeRound.id, calculateRoundScore(activeRound, settings, players, activeRoundIndex ? activeRoundIndex - 1 : undefined), activeRoundIndex ? activeRoundIndex - 1 : undefined);
                   setActiveRound(null);
               }
           }}

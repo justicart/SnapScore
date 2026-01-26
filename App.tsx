@@ -223,6 +223,7 @@ const App: React.FC = () => {
       {view === AppView.SCAN && scanPlayerId && (
         <ScanView 
           player={players.find(p => p.id === scanPlayerId)!}
+          players={players}
           existingRoundId={scanRoundId || undefined}
           targetIndex={targetRoundIndex !== null ? targetRoundIndex : undefined}
           settings={settings}

@@ -2,14 +2,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Player, CardSettings, ScanResult, DetectedCard, Round } from '../types';
 import { Button } from '../components/Button';
-import { IconCamera, IconChevronLeft, IconCheck, IconPhoto, IconX, IconTrash, IconPencil, IconPlus } from '../components/Icons';
+import { IconCamera, IconChevronLeft, IconCheck, IconPhoto, IconX, IconTrash, IconPencil, IconPlus, IconStar } from '../components/Icons';
 import { analyzeHand } from '../services/geminiService';
-import { calculateCardScore, calculateRoundScore } from '../utils/scoringUtils';
+import { calculateCardScore, calculateRoundScore, getGnomingBreakdown } from '../utils/scoringUtils';
 import { v4 as uuidv4 } from 'uuid';
 
 const RANKS = [
   '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 
-  'J', 'Q', 'K', 'A', 'Joker', 
+  '-2', '-1', 'J', 'Q', 'K', 'A', 'Joker', 'Star', 'X',
   '+1', '+2', '+5', '+10', 
   'x2', 'x3'
 ];
@@ -17,6 +17,7 @@ const SUITS = ['Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'];
 
 interface ScanViewProps {
   player: Player;
+  players?: Player[];
   settings: CardSettings;
   existingRoundId?: string;
   targetIndex?: number;
@@ -24,11 +25,11 @@ interface ScanViewProps {
   onCancel: () => void;
 }
 
-export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRoundId, targetIndex, onComplete, onCancel }) => {
+export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settings, existingRoundId, targetIndex, onComplete, onCancel }) => {
   const [image, setImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [result, setResult] = useState<ScanResult | null>(null);
   const [fullCards, setFullCards] = useState<DetectedCard[]>([]);
+  const [wentOutFirst, setWentOutFirst] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editingCardId, setEditingCardId] = useState<string | null>(null);
   const [isCameraMode, setIsCameraMode] = useState(true);
@@ -39,6 +40,19 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+
+  // Initialize from existing round if provided
+  useEffect(() => {
+    if (existingRoundId) {
+      const existing = player.rounds.find(r => r.id === existingRoundId);
+      if (existing && existing.type === 'scan') {
+        setFullCards(existing.cards);
+        setWentOutFirst(!!existing.wentOutFirst);
+        // We don't have the original image, so we stay in camera/upload mode
+        // unless identifying a new image.
+      }
+    }
+  }, [existingRoundId, player.rounds]);
 
   useEffect(() => {
     if (image || !isCameraMode) {
@@ -119,7 +133,6 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
     setError(null);
     try {
       const data = await analyzeHand(base64);
-      setResult(data);
       const cardsWithIds = data.cards.map(c => ({ ...c, id: uuidv4() }));
       setFullCards(cardsWithIds);
     } catch (err) {
@@ -135,6 +148,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
             type: 'scan',
             id: existingRoundId || uuidv4(), 
             cards: fullCards,
+            wentOutFirst,
             timestamp: Date.now()
         };
         onComplete(round, targetIndex);
@@ -143,7 +157,6 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
 
   const handleRetake = () => {
     setImage(null);
-    setResult(null);
     setFullCards([]);
     setError(null);
     setIsCameraMode(true);
@@ -164,9 +177,10 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
       setFullCards(fullCards.map(c => c.id === id ? { ...c, [field]: value } : c));
   };
 
-  // Calculate total using the updated round logic
-  const tempRound: Round = { type: 'scan', id: 'temp', cards: fullCards, timestamp: 0 };
-  const calculatedTotal = calculateRoundScore(tempRound, settings);
+  const tempRound: Round = { type: 'scan', id: existingRoundId || 'temp', cards: fullCards, timestamp: 0, wentOutFirst };
+  const calculatedTotal = calculateRoundScore(tempRound, settings, players, targetIndex);
+  const isGnoming = settings.preset === 'gnoming_around';
+  const gnomingBreakdown = isGnoming ? getGnomingBreakdown(fullCards, tempRound as any, players, targetIndex) : null;
 
   if (!image) {
     return (
@@ -237,7 +251,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
                     </h3>
                     <div className="flex items-center gap-2">
                         <span className="text-5xl font-black text-emerald-400">{calculatedTotal}</span>
-                        {fullCards.some(c => c.rank.toLowerCase().startsWith('x')) && (
+                        {!isGnoming && fullCards.some(c => c.rank.toLowerCase().startsWith('x')) && (
                             <span className="text-emerald-500/50 text-xs font-bold bg-emerald-500/10 px-2 py-1 rounded-full uppercase tracking-tighter">Multiplied</span>
                         )}
                     </div>
@@ -255,60 +269,114 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, settings, existingRo
                     <IconCheck className="w-4 h-4 text-emerald-500" />
                     Breakdown
                 </h4>
-                <ul className="space-y-2 flex-1">
-                    {fullCards.map((card) => {
-                        const isMultiplier = card.rank.toLowerCase().startsWith('x');
-                        const isAdditive = card.rank.toLowerCase().startsWith('+');
-                        
-                        return (
-                        <li key={card.id} className="flex justify-between items-center text-slate-200 border-b border-slate-700/30 last:border-0 pb-2 last:pb-0 min-h-[48px]">
-                            {editingCardId === card.id ? (
-                                <div className="flex items-center gap-2 flex-1">
-                                    <select 
-                                        value={card.rank} 
-                                        onChange={(e) => handleUpdateCard(card.id, 'rank', e.target.value)}
-                                        className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 focus:border-emerald-500 outline-none w-16 text-center"
-                                    >
-                                        {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
-                                    </select>
-                                    <span className="text-slate-500 text-xs">of</span>
-                                    <select 
-                                        value={card.suit} 
-                                        onChange={(e) => handleUpdateCard(card.id, 'suit', e.target.value)}
-                                        className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 focus:border-emerald-500 outline-none flex-1"
-                                    >
-                                        {SUITS.map(s => <option key={s} value={s}>{s}</option>)}
-                                    </select>
-                                    <button onClick={() => setEditingCardId(null)} className="p-1.5 rounded bg-emerald-500/20 text-emerald-400"><IconCheck className="w-4 h-4" /></button>
-                                    <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 rounded bg-slate-700 text-slate-400 hover:text-red-400 ml-1"><IconTrash className="w-4 h-4" /></button>
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="flex-1 flex items-baseline gap-2">
-                                        <span className={`text-xl font-black ${isMultiplier ? 'text-gold-400' : isAdditive ? 'text-emerald-400' : 'text-white'}`}>{card.rank}</span>
-                                        {card.suit !== 'None' && <span className="text-sm font-medium text-emerald-100/60">{card.suit}</span>}
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <span className={`text-sm font-mono ${isMultiplier ? 'text-gold-400 font-bold' : 'text-emerald-400'}`}>
-                                            {isMultiplier ? `${card.rank} MOD` : `+${calculateCardScore(card, settings)}`}
-                                        </span>
-                                        <div className="flex gap-1">
-                                            <button onClick={() => setEditingCardId(card.id)} className="p-1 text-slate-500 hover:text-white"><IconPencil className="w-4 h-4" /></button>
-                                            <button onClick={() => handleDeleteCard(card.id)} className="p-1 text-slate-500 hover:text-red-400"><IconTrash className="w-4 h-4" /></button>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </li>
-                        );
-                    })}
-                </ul>
-                <div className="pt-3 mt-2">
-                    <Button variant="ghost" fullWidth onClick={handleAddCard} className="border-2 border-dashed border-slate-700 hover:border-slate-600 py-2 text-sm">
-                        <IconPlus className="w-4 h-4 mr-2" /> Add Card
-                    </Button>
-                </div>
+                
+                {isGnoming && gnomingBreakdown ? (
+                   <div className="space-y-4">
+                      {gnomingBreakdown.sets.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Matching Sets</p>
+                          {gnomingBreakdown.sets.map((s, i) => (
+                            <div key={i} className="flex justify-between items-center text-blue-400 font-bold border-b border-slate-700/30 pb-1">
+                                <span>{s.label}</span>
+                                <span>{s.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <div className="space-y-1">
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Individual Cards</p>
+                          {gnomingBreakdown.loneCards.map((c, i) => (
+                             <div key={i} className="flex justify-between items-center text-slate-200 border-b border-slate-700/30 pb-1">
+                                <span className={c.isHazard ? 'text-red-400 font-bold' : c.rank === 'Star' ? 'text-gold-400' : ''}>{c.rank === 'Star' ? 'Star (Unused)' : c.rank === 'X' ? 'X (Hazard)' : c.rank}</span>
+                                <span className={c.value > 0 ? 'text-emerald-400' : 'text-blue-400'}>{c.value >= 0 ? `+${c.value}` : c.value}</span>
+                             </div>
+                          ))}
+                      </div>
+                      {gnomingBreakdown.modifiers.map((m, i) => (
+                        <div key={i} className="flex justify-between items-center text-slate-400 italic text-sm pt-1 border-t border-slate-700/30">
+                            <span>{m.label}</span>
+                            <span className={m.value < 0 ? 'text-blue-400 font-bold' : 'text-red-400 font-bold'}>{m.value >= 0 ? `+${m.value}` : m.value}</span>
+                        </div>
+                      ))}
+                   </div>
+                ) : (
+                  <ul className="space-y-2 flex-1">
+                      {fullCards.map((card) => {
+                          const isMultiplier = card.rank.toLowerCase().startsWith('x');
+                          const isAdditive = card.rank.toLowerCase().startsWith('+');
+                          
+                          return (
+                          <li key={card.id} className="flex justify-between items-center text-slate-200 border-b border-slate-700/30 last:border-0 pb-2 last:pb-0 min-h-[48px]">
+                              {editingCardId === card.id ? (
+                                  <div className="flex items-center gap-2 flex-1">
+                                      <select 
+                                          value={card.rank} 
+                                          onChange={(e) => handleUpdateCard(card.id, 'rank', e.target.value)}
+                                          className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 focus:border-emerald-500 outline-none w-16 text-center"
+                                      >
+                                          {RANKS.map(r => <option key={r} value={r}>{r}</option>)}
+                                      </select>
+                                      <span className="text-slate-500 text-xs">of</span>
+                                      <select 
+                                          value={card.suit} 
+                                          onChange={(e) => handleUpdateCard(card.id, 'suit', e.target.value)}
+                                          className="bg-slate-700 text-white rounded px-2 py-1 text-sm font-bold border border-slate-600 focus:border-emerald-500 outline-none flex-1"
+                                      >
+                                          {SUITS.map(s => <option key={s} value={s}>{s}</option>)}
+                                      </select>
+                                      <button onClick={() => setEditingCardId(null)} className="p-1.5 rounded bg-emerald-500/20 text-emerald-400"><IconCheck className="w-4 h-4" /></button>
+                                      <button onClick={() => handleDeleteCard(card.id)} className="p-1.5 rounded bg-slate-700 text-slate-400 hover:text-red-400 ml-1"><IconTrash className="w-4 h-4" /></button>
+                                  </div>
+                              ) : (
+                                  <>
+                                      <div className="flex-1 flex items-baseline gap-2">
+                                          <span className={`text-xl font-black ${isMultiplier ? 'text-gold-400' : isAdditive ? 'text-emerald-400' : 'text-white'}`}>{card.rank}</span>
+                                          {card.suit !== 'None' && <span className="text-sm font-medium text-emerald-100/60">{card.suit}</span>}
+                                      </div>
+                                      <div className="flex items-center gap-3">
+                                          <span className={`text-sm font-mono ${isMultiplier ? 'text-gold-400 font-bold' : 'text-emerald-400'}`}>
+                                              {isMultiplier ? `${card.rank} MOD` : `+${calculateCardScore(card, settings)}`}
+                                          </span>
+                                          <div className="flex gap-1">
+                                              <button onClick={() => setEditingCardId(card.id)} className="p-1 text-slate-500 hover:text-white"><IconPencil className="w-4 h-4" /></button>
+                                              <button onClick={() => handleDeleteCard(card.id)} className="p-1 text-slate-500 hover:text-red-400"><IconTrash className="w-4 h-4" /></button>
+                                          </div>
+                                      </div>
+                                  </>
+                              )}
+                          </li>
+                          );
+                      })}
+                  </ul>
+                )}
+
+                {!isGnoming && (
+                  <div className="pt-3 mt-2">
+                      <Button variant="ghost" fullWidth onClick={handleAddCard} className="border-2 border-dashed border-slate-700 hover:border-slate-600 py-2 text-sm">
+                          <IconPlus className="w-4 h-4 mr-2" /> Add Card
+                      </Button>
+                  </div>
+                )}
              </div>
+
+             {isGnoming && (
+                <div className="px-1 mb-4">
+                    <button 
+                        onClick={() => setWentOutFirst(!wentOutFirst)}
+                        className={`w-full flex justify-between items-center p-4 rounded-xl border-2 transition-all ${
+                            wentOutFirst 
+                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-900/10' 
+                            : 'bg-slate-800 border-slate-700 text-slate-400'
+                        }`}
+                    >
+                        <div className="flex items-center gap-3">
+                            <IconStar className={`w-5 h-5 ${wentOutFirst ? 'text-emerald-400' : 'text-slate-600'}`} />
+                            <span className="font-bold">I went out first</span>
+                        </div>
+                        {wentOutFirst && <IconCheck className="w-5 h-5" />}
+                    </button>
+                </div>
+             )}
 
              <div className="space-y-3 shrink-0">
                 <Button onClick={handleSave} fullWidth>
