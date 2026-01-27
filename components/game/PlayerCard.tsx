@@ -168,7 +168,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                  
                  if (settings.preset === 'gnoming_around' && round.type === 'scan' && round.wentOutFirst) {
                     const breakdown = getGnomingBreakdown(round.cards, round, players, i);
-                    const mod = breakdown.modifiers.find(m => m.label.includes('Out First'));
+                    const mod = breakdown.modifiers.find(m => m.label.includes('Out first'));
                     if (mod) {
                         if (mod.value < 0) isBonus = true;
                         else if (mod.value > 0) isPenalty = true;

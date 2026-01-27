@@ -82,7 +82,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
   let outFirstIconColor = '';
   
   if (round.type === 'scan' && round.wentOutFirst) {
-      const outFirstMod = gnomingBreakdown?.modifiers.find(m => m.label.includes('Out First'));
+      const outFirstMod = gnomingBreakdown?.modifiers.find(m => m.label.includes('Out first'));
       if (outFirstMod && outFirstMod.value > 0) {
           // Penalty (Red)
           outFirstColorClass = 'bg-danger/10 border-danger text-danger-soft shadow-[0_0_15px_rgba(239,68,68,0.1)]';
