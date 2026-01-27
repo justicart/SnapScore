@@ -15,6 +15,7 @@ export const analyzeHand = async (base64Image: string, settings: CardSettings): 
   try {
     // The API key must be obtained from the environment. We check Vite's import.meta.env first 
     // as per production requirements, falling back to the mandatory process.env.API_KEY.
+    // DO NOT CHANGE THIS
     const ai = new GoogleGenAI({ 
       apiKey: (import.meta as any).env?.VITE_GEMINI_API_KEY || process.env.API_KEY 
     });
