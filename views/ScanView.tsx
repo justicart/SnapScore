@@ -9,9 +9,9 @@ import { v4 as uuidv4 } from 'uuid';
 
 const RANKS = [
   '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', 
-  '-2', '-1', 'J', 'Q', 'K', 'A', 'Joker', 'Star', 'X',
-  '+1', '+2', '+5', '+10', 
-  'x2', 'x3'
+  '-4', '-3', '-2', '-1', 'J', 'Q', 'K', 'A', 'Joker', 'Star', 'X',
+  '+2', '+4', '+6', '+8', '+10', 
+  'x2'
 ];
 const SUITS = ['Spades', 'Hearts', 'Diamonds', 'Clubs', 'Stars', 'None'];
 
@@ -185,6 +185,23 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
   const calculatedTotal = calculateRoundScore(tempRound, settings, players, targetIndex);
   const isGnoming = settings.preset === 'gnoming_around';
   const gnomingBreakdown = isGnoming ? getGnomingBreakdown(fullCards, tempRound as any, players, targetIndex) : null;
+  
+  // Determine color for "Went Out First" button based on modifier
+  let outFirstColorClass = 'bg-slate-800 border-slate-700 text-slate-400';
+  let outFirstIconColor = 'text-slate-600';
+  
+  if (wentOutFirst) {
+      const outFirstMod = gnomingBreakdown?.modifiers.find(m => m.label.includes('Out First'));
+      if (outFirstMod && outFirstMod.value > 0) {
+          // Penalty (Red)
+          outFirstColorClass = 'bg-red-500/10 border-red-500 text-red-400 shadow-lg shadow-red-900/10';
+          outFirstIconColor = 'text-red-400';
+      } else {
+          // Bonus/Default (Green)
+          outFirstColorClass = 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-900/10';
+          outFirstIconColor = 'text-emerald-400';
+      }
+  }
 
   if (!image) {
     return (
@@ -299,7 +316,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
                       {gnomingBreakdown.modifiers.map((m, i) => (
                         <div key={i} className="flex justify-between items-center text-slate-400 italic text-sm pt-1 border-t border-slate-700/30">
                             <span>{m.label}</span>
-                            <span className={m.value < 0 ? 'text-blue-400 font-bold' : 'text-red-400 font-bold'}>{m.value >= 0 ? `+${m.value}` : m.value}</span>
+                            <span className={m.value < 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{m.value >= 0 ? `+${m.value}` : m.value}</span>
                         </div>
                       ))}
                    </div>
@@ -367,14 +384,10 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
                 <div className="px-1 mb-4">
                     <button 
                         onClick={() => setWentOutFirst(!wentOutFirst)}
-                        className={`w-full flex justify-between items-center p-4 rounded-xl border-2 transition-all ${
-                            wentOutFirst 
-                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-lg shadow-emerald-900/10' 
-                            : 'bg-slate-800 border-slate-700 text-slate-400'
-                        }`}
+                        className={`w-full flex justify-between items-center p-4 rounded-xl border-2 transition-all ${outFirstColorClass}`}
                     >
                         <div className="flex items-center gap-3">
-                            <IconStar className={`w-5 h-5 ${wentOutFirst ? 'text-emerald-400' : 'text-slate-600'}`} />
+                            <IconStar className={`w-5 h-5 ${outFirstIconColor}`} />
                             <span className="font-bold">I went out first</span>
                         </div>
                         {wentOutFirst && <IconCheck className="w-5 h-5" />}

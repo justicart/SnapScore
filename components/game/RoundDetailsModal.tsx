@@ -78,6 +78,21 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
   const displayIndex = roundIndex !== null ? roundIndex - 1 : undefined;
   const gnomingBreakdown = (isGnoming && round.type === 'scan') ? getGnomingBreakdown(round.cards, round, players, displayIndex) : null;
 
+  // Determine color for "Went Out First" button based on modifier
+  let outFirstColorClass = 'bg-slate-800 border-slate-700 text-slate-400';
+  let outFirstIconColor = '';
+  
+  if (round.type === 'scan' && round.wentOutFirst) {
+      const outFirstMod = gnomingBreakdown?.modifiers.find(m => m.label.includes('Out First'));
+      if (outFirstMod && outFirstMod.value > 0) {
+          // Penalty (Red)
+          outFirstColorClass = 'bg-red-500/10 border-red-500 text-red-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]';
+      } else {
+          // Bonus/Default (Green)
+          outFirstColorClass = 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]';
+      }
+  }
+
   return (
     <div className="fixed inset-0 z-[60] bg-felt-900 flex flex-col w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800">
       <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
@@ -161,7 +176,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
                                 {gnomingBreakdown.modifiers.map((m, i) => (
                                     <div key={i} className="flex justify-between items-center bg-slate-900/40 px-2 py-1 rounded italic">
                                         <span className="text-sm text-slate-400">{m.label}</span>
-                                        <span className={m.value < 0 ? 'text-blue-400 font-bold' : 'text-red-400 font-bold'}>{m.value >= 0 ? `+${m.value}` : m.value}</span>
+                                        <span className={m.value < 0 ? 'text-emerald-400 font-bold' : 'text-red-400 font-bold'}>{m.value >= 0 ? `+${m.value}` : m.value}</span>
                                     </div>
                                 ))}
                              </div>
@@ -252,11 +267,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
                     </div>
                     <button 
                         onClick={toggleWentOut}
-                        className={`w-full flex justify-between items-center p-3 rounded-xl border-2 transition-all ${
-                            round.wentOutFirst 
-                            ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
-                            : 'bg-slate-800 border-slate-700 text-slate-400'
-                        }`}
+                        className={`w-full flex justify-between items-center p-3 rounded-xl border-2 transition-all ${outFirstColorClass}`}
                     >
                         <span className="font-bold">I went out first</span>
                         {round.wentOutFirst ? <IconCheck className="w-5 h-5" /> : <div className="w-5 h-5 rounded-full border border-slate-600" />}

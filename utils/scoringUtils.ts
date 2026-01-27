@@ -20,7 +20,7 @@ export const calculateCardScore = (card: Omit<DetectedCard, 'id'>, settings: Car
     return isNaN(val) ? 0 : val;
   }
 
-  if (rank === 'JOKER') return settings.jokerValue;
+  if (rank === 'JOKER' || rank === '$') return settings.jokerValue;
   if (rank === 'A' || rank === 'ACE') return settings.aceValue;
 
   if (['K', 'Q', 'J', 'KING', 'QUEEN', 'JACK'].includes(rank)) {

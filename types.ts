@@ -27,7 +27,6 @@ export interface CardSettings {
   numberCardBehavior: 'face' | 'fixed';
   fixedNumberValue?: number;
   winningScoreType: 'lowest' | 'highest';
-  useGambit?: boolean; // New: Advanced AI logic toggle
 }
 
 export enum AppView {

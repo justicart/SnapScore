@@ -175,6 +175,7 @@ export const GameView: React.FC<GameViewProps> = ({
       <PlayerCard
         key={player.id}
         player={player}
+        players={players}
         index={index}
         totalPlayers={players.length}
         settings={settings}
@@ -206,6 +207,7 @@ export const GameView: React.FC<GameViewProps> = ({
         isConnected={isConnected}
         playersCount={players.length}
         maxRounds={maxRounds}
+        settings={settings}
         onLeave={onLeave}
         onNewGame={onNewGame}
         onOpenSettings={onOpenSettings}

@@ -15,8 +15,7 @@
     "react": "^19.2.0",
     "peerjs": "1.5.2",
     "qrcode": "1.5.3",
-    "jsqr": "1.4.0",
-    "@bolt-foundry/gambit-core": "latest"
+    "jsqr": "1.4.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

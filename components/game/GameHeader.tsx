@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { IconSettings } from '../Icons';
+import { CardSettings } from '../../types';
 
 interface GameHeaderProps {
   isEditMode: boolean;
@@ -9,6 +10,7 @@ interface GameHeaderProps {
   isConnected: boolean;
   playersCount: number;
   maxRounds: number;
+  settings: CardSettings;
   onLeave: () => void;
   onNewGame: () => void;
   onOpenSettings: () => void;
@@ -23,10 +25,17 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
   isConnected,
   playersCount,
   maxRounds,
+  settings,
   onOpenSettings,
   setShowLeaveConfirm,
   setShowNewGameConfirm
 }) => {
+  const getPresetName = (p: string) => {
+    if (p === 'flip7') return 'Flip 7';
+    if (p === 'gnoming_around') return 'Gnoming Around';
+    return 'Standard';
+  };
+
   return (
     <header 
       className="bg-slate-900/50 backdrop-blur-md border-b border-slate-800 p-4 sticky top-0 z-10 flex justify-between items-center transition-colors duration-300" 
@@ -47,7 +56,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
               )}
             </h1>
             <p className="text-xs text-slate-400">
-              Round {Math.max(1, maxRounds) + (playersCount > 0 && maxRounds > 0 ? 0 : 1)}
+              {getPresetName(settings.preset)} • Round {Math.max(1, maxRounds) + (playersCount > 0 && maxRounds > 0 ? 0 : 1)}
             </p>
           </>
         )}

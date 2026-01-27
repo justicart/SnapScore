@@ -2,10 +2,11 @@
 import React, { useRef, useEffect } from 'react';
 import { Player, CardSettings, Round } from '../../types';
 import { IconCamera, IconPlus, IconStar, IconTrash } from '../Icons';
-import { calculatePlayerTotal, calculateRoundScore } from '../../utils/scoringUtils';
+import { calculatePlayerTotal, calculateRoundScore, getGnomingBreakdown } from '../../utils/scoringUtils';
 
 interface PlayerCardProps {
   player: Player;
+  players: Player[];
   index: number;
   totalPlayers: number;
   settings: CardSettings;
@@ -24,6 +25,7 @@ interface PlayerCardProps {
 
 export const PlayerCard: React.FC<PlayerCardProps> = ({
   player,
+  players,
   index,
   totalPlayers,
   settings,
@@ -144,7 +146,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
         </h3>
         <div className="text-right">
           <span className={`text-3xl font-black leading-none ${isWinner ? 'text-gold-400' : 'text-emerald-400'}`}>
-            {calculatePlayerTotal(player, settings)}
+            {calculatePlayerTotal(player, settings, players)}
           </span>
         </div>
       </div>
@@ -159,6 +161,29 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
              const isTargetedSlot = i === targetIndex;
 
              if (round) {
+                 let buttonClass = "w-8 h-7 flex items-center justify-center rounded border border-transparent transition-colors cursor-pointer shrink-0 font-bold ";
+                 
+                 // Handle specific coloring for Gnoming Around "Went Out First" bonus/penalty
+                 let isBonus = false;
+                 let isPenalty = false;
+                 
+                 if (settings.preset === 'gnoming_around' && round.type === 'scan' && round.wentOutFirst) {
+                    const breakdown = getGnomingBreakdown(round.cards, round, players, i);
+                    const mod = breakdown.modifiers.find(m => m.label.includes('Out First'));
+                    if (mod) {
+                        if (mod.value < 0) isBonus = true;
+                        else if (mod.value > 0) isPenalty = true;
+                    }
+                 }
+
+                 if (isBonus) {
+                    buttonClass += "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20";
+                 } else if (isPenalty) {
+                    buttonClass += "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20";
+                 } else {
+                    buttonClass += "bg-slate-900/50 hover:bg-slate-900 hover:text-emerald-400";
+                 }
+
                  return (
                      <button 
                         key={round.id || i} 
@@ -166,9 +191,9 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                             e.stopPropagation();
                             onRoundClick(round, player.name, player.id, i + 1);
                         }}
-                        className="bg-slate-900/50 hover:bg-slate-900 hover:text-emerald-400 w-8 h-7 flex items-center justify-center rounded border border-transparent hover:border-emerald-500/30 transition-colors cursor-pointer shrink-0 font-bold"
+                        className={buttonClass}
                      >
-                       {calculateRoundScore(round, settings)}
+                       {calculateRoundScore(round, settings, players, i)}
                      </button>
                  );
              } else {

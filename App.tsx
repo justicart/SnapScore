@@ -114,7 +114,10 @@ const App: React.FC = () => {
   };
 
   const handleClearSession = async () => {
-    if (isClientState) return;
+    if (isClientState) {
+        multiplayer.handleLeaveGame();
+        return;
+    }
     multiplayer.handleHostEndSession();
     clearSession();
     setIsClientState(false);
@@ -183,6 +186,7 @@ const App: React.FC = () => {
           onOpenMultiplayer={() => setIsMultiplayerOpen(true)}
           isClient={isClientState}
           players={players}
+          settings={settings}
           onClearSession={handleClearSession}
           onRemovePlayer={(id) => {
               if (isClientState) multiplayer.sendToHostAction({ type: 'REQUEST_REMOVE_PLAYER', payload: { playerId: id } });

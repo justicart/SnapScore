@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { CardSettings, GamePreset } from '../types';
 import { Button } from '../components/Button';
-import { IconChevronLeft, IconStar, IconCheck } from '../components/Icons';
+import { IconChevronLeft, IconStar, IconCheck, IconChevronDown, IconX, IconSettings } from '../components/Icons';
 
 interface SettingsViewProps {
   settings: CardSettings;
@@ -14,6 +14,7 @@ interface SettingsViewProps {
 
 export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, onCancel, isClient, onLeave }) => {
   const [formData, setFormData] = useState<CardSettings>(settings);
+  const [isPresetSheetOpen, setIsPresetSheetOpen] = useState(false);
 
   const handleChange = (field: keyof CardSettings, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -33,8 +34,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
     setFormData(newSettings);
   };
 
+  const PRESETS = [
+    { id: 'standard', name: 'Standard / Custom', desc: 'Manual scoring sliders.' },
+    { id: 'flip7', name: 'Flip 7', desc: 'Additive (+X) & Multiplier (xX) cards.' },
+    { id: 'gnoming_around', name: 'Gnoming Around', desc: '3x3 Grid sets, Star wilds, X hazards.' }
+  ];
+
+  const currentPreset = PRESETS.find(p => p.id === formData.preset) || PRESETS[0];
+
   return (
-    <div className="flex flex-col h-full bg-felt-900">
+    <div className="flex flex-col h-full bg-felt-900 relative">
       <div className="flex items-center p-4 bg-slate-800 shadow-sm">
         <button onClick={onCancel} className="p-2 -ml-2 text-slate-400 hover:text-white">
           <IconChevronLeft className="w-6 h-6" />
@@ -44,32 +53,24 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
 
       <div className="p-6 space-y-10 overflow-y-auto flex-1">
         
-        {/* Presets */}
+        {/* Preset Selector */}
         <div className="space-y-3">
             <label className="block text-sm font-medium text-emerald-400 uppercase tracking-widest">Game Preset</label>
-            <div className="grid grid-cols-1 gap-2">
-                {[
-                    { id: 'standard', name: 'Standard / Custom', desc: 'Manual scoring sliders.' },
-                    { id: 'flip7', name: 'Flip 7', desc: 'Additive (+X) & Multiplier (xX) cards.' },
-                    { id: 'gnoming_around', name: 'Gnoming Around', desc: '3x3 Grid sets, Star wilds, X hazards.' }
-                ].map((p) => (
-                    <button
-                        key={p.id}
-                        onClick={() => selectPreset(p.id as GamePreset)}
-                        className={`flex flex-col items-start p-4 rounded-xl border-2 transition-all ${
-                            formData.preset === p.id 
-                            ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.2)]' 
-                            : 'bg-slate-800 border-slate-700 hover:border-slate-600'
-                        }`}
-                    >
-                        <div className="flex justify-between w-full items-center mb-1">
-                            <span className={`font-bold ${formData.preset === p.id ? 'text-white' : 'text-slate-200'}`}>{p.name}</span>
-                            {formData.preset === p.id && <IconCheck className="w-5 h-5 text-emerald-400" />}
-                        </div>
-                        <span className="text-xs text-slate-500 text-left leading-tight">{p.desc}</span>
-                    </button>
-                ))}
-            </div>
+             <button
+                onClick={() => setIsPresetSheetOpen(true)}
+                className="w-full flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-4 text-left hover:border-emerald-500 transition-colors group"
+            >
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-slate-700 rounded-lg group-hover:bg-emerald-500/20 group-hover:text-emerald-400 transition-colors text-slate-400">
+                        {formData.preset === 'standard' ? <IconSettings className="w-6 h-6" /> : <IconStar className="w-6 h-6" />}
+                    </div>
+                    <div>
+                        <span className="block font-bold text-white text-lg">{currentPreset.name}</span>
+                        <span className="block text-xs text-slate-500">{currentPreset.desc}</span>
+                    </div>
+                </div>
+                <IconChevronDown className="w-5 h-5 text-slate-500 group-hover:text-emerald-400" />
+            </button>
         </div>
 
         {formData.preset === 'standard' ? (
@@ -224,34 +225,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
 
         <hr className="border-slate-800" />
 
-        {/* Advanced AI Toggle (Moved to bottom) */}
-        <div className="space-y-3">
-            <label className="block text-sm font-medium text-emerald-400 uppercase tracking-widest">Vision Engine</label>
-            <button
-                onClick={() => handleChange('useGambit', !formData.useGambit)}
-                className={`w-full flex justify-between items-center p-4 rounded-xl border-2 transition-all ${
-                    formData.useGambit 
-                    ? 'bg-emerald-500/10 border-emerald-500 shadow-lg shadow-emerald-500/10' 
-                    : 'bg-slate-800 border-slate-700'
-                }`}
-            >
-                <div className="text-left">
-                    <span className={`block font-bold ${formData.useGambit ? 'text-white' : 'text-slate-300'}`}>
-                        Advanced AI Mode (Gambit)
-                    </span>
-                    <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tight">
-                        {formData.useGambit ? 'Enabled: Multi-turn verification' : 'Disabled: Single-shot prompt'}
-                    </span>
-                </div>
-                <div className={`w-12 h-6 rounded-full relative transition-colors ${formData.useGambit ? 'bg-emerald-500' : 'bg-slate-600'}`}>
-                    <div className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.useGambit ? 'left-7' : 'left-1'}`} />
-                </div>
-            </button>
-            <p className="text-[10px] text-slate-500 px-1">
-                Advanced Mode uses more tokens but verifies complex scoring rules (like Gnoming rows) before finalizing the result. Recommended for complex games.
-            </p>
-        </div>
-
         {isClient && onLeave && (
             <div className="pt-2">
                  <Button variant="danger" fullWidth onClick={onLeave}>
@@ -267,6 +240,51 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
           {isClient ? "Close" : "Apply Rules"}
         </Button>
       </div>
+
+      {/* Preset Selection Sheet */}
+      {isPresetSheetOpen && (
+        <div className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-end justify-center sm:items-center p-4 sm:p-0" onClick={() => setIsPresetSheetOpen(false)}>
+            <div 
+                className="bg-slate-900 w-full max-w-md rounded-2xl border border-slate-800 p-6 space-y-4 animate-in slide-in-from-bottom duration-200 shadow-2xl mb-4 sm:mb-0"
+                onClick={e => e.stopPropagation()}
+            >
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-xl font-bold text-white">Select Preset</h3>
+                    <button onClick={() => setIsPresetSheetOpen(false)} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-full">
+                        <IconX className="w-6 h-6" />
+                    </button>
+                </div>
+                
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {PRESETS.map(p => (
+                        <button
+                            key={p.id}
+                            onClick={() => {
+                                selectPreset(p.id as GamePreset);
+                                setIsPresetSheetOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between p-4 rounded-xl border-2 text-left transition-all ${
+                                formData.preset === p.id 
+                                ? 'bg-emerald-500/10 border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
+                                : 'bg-slate-800/50 border-slate-700 hover:bg-slate-800'
+                            }`}
+                        >
+                            <div className="flex items-center gap-3">
+                                 <div className={`p-2 rounded-lg ${formData.preset === p.id ? 'bg-emerald-500/20 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
+                                    {p.id === 'standard' ? <IconSettings className="w-5 h-5" /> : <IconStar className="w-5 h-5" />}
+                                 </div>
+                                 <div>
+                                    <span className={`block font-bold ${formData.preset === p.id ? 'text-emerald-400' : 'text-white'}`}>{p.name}</span>
+                                    <span className="text-xs text-slate-500">{p.desc}</span>
+                                </div>
+                            </div>
+                            {formData.preset === p.id && <div className="bg-emerald-500 rounded-full p-1"><IconCheck className="w-3 h-3 text-white" /></div>}
+                        </button>
+                    ))}
+                </div>
+            </div>
+        </div>
+      )}
     </div>
   );
 };

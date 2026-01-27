@@ -1,5 +1,4 @@
 
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Player, CardSettings } from '../types';
 import { Button } from '../components/Button';
@@ -13,6 +12,7 @@ interface SetupViewProps {
   onOpenMultiplayer: () => void;
   isClient: boolean;
   players: Player[]; // existing roster
+  settings: CardSettings;
   onClearSession?: () => void;
   onRemovePlayer?: (id: string) => void;
 }
@@ -23,6 +23,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
   onOpenMultiplayer,
   isClient,
   players,
+  settings,
   onClearSession,
   onRemovePlayer
 }) => {
@@ -134,6 +135,12 @@ export const SetupView: React.FC<SetupViewProps> = ({
     }
   };
 
+  const getPresetName = (p: string) => {
+    if (p === 'flip7') return 'Flip 7';
+    if (p === 'gnoming_around') return 'Gnoming Around';
+    return 'Standard Rules';
+  };
+
   // Determine if submit button should be disabled
   const hasInput = names.some(n => n.trim().length > 0);
   const canSubmit = isClient ? hasInput : (hasInput || players.length > 0);
@@ -144,7 +151,10 @@ export const SetupView: React.FC<SetupViewProps> = ({
       <div className="flex justify-between items-center px-6 pt-6 pb-4 shrink-0">
         <div>
             <h1 className="text-3xl font-bold text-white tracking-tight">SnapScore</h1>
-            {isClient && <span className="text-xs text-emerald-400 font-bold tracking-wider uppercase">Joined Lobby</span>}
+            <p className="text-xs text-emerald-400 font-bold tracking-wider uppercase">
+                {getPresetName(settings.preset)}
+                {isClient && <span className="text-slate-500 ml-2">• Joined Lobby</span>}
+            </p>
         </div>
         <div className="flex gap-2">
             <button 
@@ -300,8 +310,8 @@ export const SetupView: React.FC<SetupViewProps> = ({
         )}
 
         <div className="flex gap-3">
-            {/* Clear Button (Host only) */}
-            {!isClient && onClearSession && players.length > 0 && (
+            {/* Clear/Leave Button */}
+            {onClearSession && (isClient || players.length > 0) && (
                 <Button 
                     variant="danger" 
                     onClick={() => setShowClearConfirm(true)}
@@ -333,9 +343,12 @@ export const SetupView: React.FC<SetupViewProps> = ({
       {showClearConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
-                <h3 className="text-xl font-bold text-white mb-2">Clear Session?</h3>
+                <h3 className="text-xl font-bold text-white mb-2">{isClient ? 'Leave Lobby?' : 'Clear Session?'}</h3>
                 <p className="text-slate-400 mb-6 text-sm">
-                    This will disconnect all players, delete the current roster, and create a new session.
+                    {isClient 
+                        ? "You will disconnect from the host and return to the main setup."
+                        : "This will disconnect all players, delete the current roster, and create a new session."
+                    }
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                     <Button variant="secondary" onClick={() => setShowClearConfirm(false)}>
@@ -348,7 +361,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
                             setShowClearConfirm(false);
                         }}
                     >
-                        Clear All
+                        {isClient ? 'Leave' : 'Clear All'}
                     </Button>
                 </div>
             </div>
