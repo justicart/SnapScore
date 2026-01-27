@@ -1,4 +1,3 @@
-
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import jsQR from 'jsqr';
@@ -133,11 +132,11 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
   }, [mode]);
 
   return (
-    <div className="fixed inset-0 z-50 bg-felt-900 flex flex-col h-[100dvh] w-full md:max-w-md md:mx-auto md:border-x md:border-slate-800">
+    <div className="fixed inset-0 z-50 bg-canvas flex flex-col h-[100dvh] w-full md:max-w-md md:mx-auto md:border-x md:border-surface">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 border-b border-slate-800 bg-slate-900/50 shrink-0">
+      <div className="flex justify-between items-center p-4 border-b border-surface bg-surface-dark/50 shrink-0">
         <h2 className="text-xl font-bold text-white">Multiplayer</h2>
-        <button onClick={onClose} className="p-2 -mr-2 rounded-full text-slate-400 hover:text-white">
+        <button onClick={onClose} className="p-2 -mr-2 rounded-full text-ink-muted hover:text-white">
           <IconX className="w-6 h-6" />
         </button>
       </div>
@@ -145,11 +144,11 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
       <div className="flex-1 flex flex-col overflow-hidden relative">
         {/* Tabs */}
         <div className="px-6 pt-6 shrink-0 z-10">
-          <div className="flex bg-slate-800 p-1 rounded-xl">
+          <div className="flex bg-surface p-1 rounded-xl">
             <button 
               onClick={() => setMode('HOST')}
               className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${
-                mode === 'HOST' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'
+                mode === 'HOST' ? 'bg-primary text-white shadow-lg' : 'text-ink-muted hover:text-ink'
               }`}
             >
               Host game
@@ -157,7 +156,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
             <button 
               onClick={() => setMode('JOIN')}
               className={`flex-1 py-3 rounded-lg font-bold text-sm transition-all ${
-                mode === 'JOIN' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'
+                mode === 'JOIN' ? 'bg-primary text-white shadow-lg' : 'text-ink-muted hover:text-ink'
               }`}
             >
               Scan QR
@@ -175,38 +174,38 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                 </div>
                 ) : (
                 <div className="w-56 h-56 flex items-center justify-center mx-auto">
-                    <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                    <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
                 </div>
                 )}
                 
-                <div className="bg-slate-800/50 rounded-lg p-4">
-                    <p className="text-slate-400 mb-2 text-sm">Friends can scan this code to join.</p>
+                <div className="bg-surface/50 rounded-lg p-4">
+                    <p className="text-ink-muted mb-2 text-sm">Friends can scan this code to join.</p>
                     {connectedPeers.length > 0 ? (
                         <div className="w-full">
-                            <div className="inline-flex items-center gap-2 bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-full text-sm font-bold animate-pulse mb-4">
+                            <div className="inline-flex items-center gap-2 bg-primary/20 text-primary-soft px-4 py-2 rounded-full text-sm font-bold animate-pulse mb-4">
                             <IconCheck className="w-4 h-4" />
                             {connectedPeers.length} Connected
                             </div>
-                            <div className="bg-slate-900/50 rounded-lg p-3 w-full max-h-40 overflow-y-auto text-left border border-slate-800">
-                                <p className="text-[10px] uppercase text-slate-500 font-bold mb-2 sticky top-0 bg-slate-900/90 backdrop-blur pb-1">Client IDs</p>
+                            <div className="bg-surface-dark/50 rounded-lg p-3 w-full max-h-40 overflow-y-auto text-left border border-surface">
+                                <p className="text-[10px] uppercase text-ink-subtle font-bold mb-2 sticky top-0 bg-surface-dark/90 backdrop-blur pb-1">Client IDs</p>
                                 <ul className="space-y-1">
                                     {connectedPeers.map(id => {
                                         const peerPlayers = players.filter(p => p.deviceId === id);
                                         return (
-                                            <li key={id} className="border-b border-slate-800/50 last:border-0 pb-1.5 last:pb-0 mb-1 last:mb-0">
+                                            <li key={id} className="border-b border-surface/50 last:border-0 pb-1.5 last:pb-0 mb-1 last:mb-0">
                                                 <div className="flex justify-between items-center">
-                                                     <span className="text-xs font-mono text-slate-500 truncate select-all">{id}</span>
+                                                     <span className="text-xs font-mono text-ink-subtle truncate select-all">{id}</span>
                                                 </div>
                                                 {peerPlayers.length > 0 ? (
                                                     <div className="flex flex-wrap gap-1 mt-1">
                                                         {peerPlayers.map(p => (
-                                                            <span key={p.id} className="text-[10px] bg-slate-800 text-emerald-400 px-1.5 py-0.5 rounded border border-slate-700 font-medium">
+                                                            <span key={p.id} className="text-[10px] bg-surface text-primary-soft px-1.5 py-0.5 rounded border border-surface-highlight font-medium">
                                                                 {p.name}
                                                             </span>
                                                         ))}
                                                     </div>
                                                 ) : (
-                                                    <span className="text-[10px] text-slate-600 italic pl-1">No players added yet</span>
+                                                    <span className="text-[10px] text-ink-subtle italic pl-1">No players added yet</span>
                                                 )}
                                             </li>
                                         );
@@ -215,19 +214,19 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                             </div>
                         </div>
                     ) : (
-                        <p className="text-xs text-slate-500 italic">Waiting for players...</p>
+                        <p className="text-xs text-ink-subtle italic">Waiting for players...</p>
                     )}
                 </div>
                 
                 <div className="pt-2">
                     <button 
                         onClick={handleCopyLink}
-                        className="flex items-center justify-center gap-2 w-full bg-slate-700 hover:bg-slate-600 text-white py-4 rounded-xl transition-all font-semibold"
+                        className="flex items-center justify-center gap-2 w-full bg-surface-highlight hover:bg-surface-highlight/80 text-white py-4 rounded-xl transition-all font-semibold"
                     >
-                        {copySuccess ? <IconCheck className="w-5 h-5 text-emerald-400" /> : <IconLink className="w-5 h-5" />}
+                        {copySuccess ? <IconCheck className="w-5 h-5 text-primary-soft" /> : <IconLink className="w-5 h-5" />}
                         {copySuccess ? 'Link copied!' : 'Copy invite link'}
                     </button>
-                    <p className="text-xs text-slate-600 font-mono mt-3 select-all">ID: {hostId}</p>
+                    <p className="text-xs text-ink-subtle font-mono mt-3 select-all">ID: {hostId}</p>
                 </div>
             </div>
             )}
@@ -235,13 +234,13 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
             {mode === 'JOIN' && (
             <div className="w-full h-full flex flex-col items-center justify-center relative mt-4">
                 {joinError ? (
-                    <div className="text-red-400 text-center bg-red-500/10 p-6 rounded-xl">
+                    <div className="text-danger-soft text-center bg-danger/10 p-6 rounded-xl">
                         <p className="mb-4 font-semibold">{joinError}</p>
                         <Button onClick={() => setMode('JOIN')}>Retry camera</Button>
                     </div>
                 ) : (
                     <>
-                        <div className="relative w-full max-w-xs aspect-square bg-black rounded-2xl overflow-hidden border-2 border-emerald-500/50 shadow-2xl">
+                        <div className="relative w-full max-w-xs aspect-square bg-black rounded-2xl overflow-hidden border-2 border-primary/50 shadow-2xl">
                         <video 
                             ref={videoRef} 
                             className={`absolute inset-0 w-full h-full object-cover opacity-80 transition-transform ${isMirrored ? 'scale-x-[-1]' : ''}`} 
@@ -250,15 +249,15 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                         />
                         <canvas ref={canvasRef} className="hidden" />
                         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                            <div className="w-56 h-56 border-2 border-emerald-400 rounded-lg relative">
-                                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-emerald-400 -mt-1 -ml-1 rounded-tl-sm"></div>
-                                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-emerald-400 -mt-1 -mr-1 rounded-tr-sm"></div>
-                                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-emerald-400 -mb-1 -ml-1 rounded-bl-sm"></div>
-                                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-emerald-400 -mb-1 -mr-1 rounded-br-sm"></div>
+                            <div className="w-56 h-56 border-2 border-primary-soft rounded-lg relative">
+                                <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-primary-soft -mt-1 -ml-1 rounded-tl-sm"></div>
+                                <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-primary-soft -mt-1 -mr-1 rounded-tr-sm"></div>
+                                <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-primary-soft -mb-1 -ml-1 rounded-bl-sm"></div>
+                                <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-primary-soft -mb-1 -mr-1 rounded-br-sm"></div>
                             </div>
                         </div>
                         </div>
-                        <p className="mt-8 text-slate-400 text-sm text-center animate-pulse bg-slate-900/50 px-4 py-2 rounded-full">
+                        <p className="mt-8 text-ink-muted text-sm text-center animate-pulse bg-surface-dark/50 px-4 py-2 rounded-full">
                             Point camera at host QR code
                         </p>
                     </>

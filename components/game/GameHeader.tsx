@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { IconSettings } from '../Icons';
 import { CardSettings } from '../../types';
@@ -38,7 +37,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
 
   return (
     <header 
-      className="bg-slate-900/50 backdrop-blur-md border-b border-slate-800 p-4 sticky top-0 z-10 flex justify-between items-center transition-colors duration-300" 
+      className="bg-surface-dark/50 backdrop-blur-md border-b border-surface p-4 sticky top-0 z-10 flex justify-between items-center transition-colors duration-300" 
       style={{ backgroundColor: isEditMode ? 'rgba(6, 78, 59, 0.9)' : undefined }}
     >
       <div>
@@ -49,13 +48,13 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             <h1 className="text-xl font-bold text-white flex items-center gap-2">
               Scoreboard
               {isClient && (
-                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${isConnected ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-red-500/10 border-red-500/20 text-red-400'}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                <div className={`flex items-center gap-1.5 px-2 py-0.5 rounded-full border ${isConnected ? 'bg-primary/10 border-primary/20 text-primary-soft' : 'bg-danger/10 border-danger/20 text-danger-soft'}`}>
+                  <div className={`w-1.5 h-1.5 rounded-full ${isConnected ? 'bg-primary animate-pulse' : 'bg-danger'}`} />
                   <span className="text-[10px] font-bold uppercase tracking-wider">{isConnected ? 'Online' : 'Offline'}</span>
                 </div>
               )}
             </h1>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-ink-muted">
               {getPresetName(settings.preset)} • Round {Math.max(1, maxRounds) + (playersCount > 0 && maxRounds > 0 ? 0 : 1)}
             </p>
           </>
@@ -65,7 +64,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
         {isEditMode ? (
           <button 
             onClick={() => setIsEditMode(false)}
-            className="bg-white text-emerald-900 px-4 py-2 rounded-full font-bold text-sm shadow-lg"
+            className="bg-white text-primary-deep px-4 py-2 rounded-full font-bold text-sm shadow-lg"
           >
             Done
           </button>
@@ -74,14 +73,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             {isClient ? (
               <button 
                 onClick={() => setShowLeaveConfirm(true)} 
-                className="text-xs font-bold text-slate-400 hover:text-white px-2 py-1 bg-slate-800 rounded mr-1 border border-slate-700"
+                className="text-xs font-bold text-ink-muted hover:text-white px-2 py-1 bg-surface rounded mr-1 border border-surface-highlight"
               >
                 Leave game
               </button>
             ) : (
               <button 
                 onClick={() => setShowNewGameConfirm(true)} 
-                className="text-xs font-bold text-emerald-400 hover:text-white px-2 py-1 bg-emerald-500/10 rounded mr-1 border border-emerald-500/20 hover:bg-emerald-500/20"
+                className="text-xs font-bold text-primary-soft hover:text-white px-2 py-1 bg-primary/10 rounded mr-1 border border-primary/20 hover:bg-primary/20"
               >
                 New game
               </button>
@@ -89,7 +88,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
             
             <button 
               onClick={onOpenSettings} 
-              className="p-2 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700"
+              className="p-2 rounded-full bg-surface text-ink-muted hover:bg-surface-highlight"
             >
               <IconSettings className="w-5 h-5" />
             </button>

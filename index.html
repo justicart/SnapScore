@@ -7,19 +7,89 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>SnapScore Cards</title>
+    <style>
+      :root {
+        /* Base Canvas (Felt-900) */
+        --c-canvas: 15 34 27; 
+        
+        /* Surface (Slate-800) */
+        --c-surface: 30 41 59; 
+        
+        /* Surface Highlight (Slate-700) */
+        --c-surface-highlight: 51 65 85; 
+        
+        /* Surface Dark (Slate-900) */
+        --c-surface-dark: 15 23 42;
+
+        /* Ink (Slate-100) */
+        --c-ink: 241 245 249;
+        
+        /* Ink Muted (Slate-400) */
+        --c-ink-muted: 148 163 184;
+        
+        /* Ink Subtle (Slate-600) */
+        --c-ink-subtle: 71 85 105;
+
+        /* Primary (Emerald-500) */
+        --c-primary: 16 185 129;
+        
+        /* Primary Soft (Emerald-400) */
+        --c-primary-soft: 52 211 153;
+        
+        /* Primary Deep (Emerald-900) */
+        --c-primary-deep: 6 78 59;
+
+        /* Danger (Red-500) */
+        --c-danger: 239 68 68;
+        
+        /* Danger Soft (Red-400) */
+        --c-danger-soft: 248 113 113;
+        
+        /* Danger Deep (Red-900) */
+        --c-danger-deep: 127 29 29;
+
+        /* Accent (Gold-400) */
+        --c-accent: 251 191 36;
+      }
+    </style>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
+              canvas: 'rgb(var(--c-canvas) / <alpha-value>)',
+              surface: {
+                DEFAULT: 'rgb(var(--c-surface) / <alpha-value>)',
+                highlight: 'rgb(var(--c-surface-highlight) / <alpha-value>)',
+                dark: 'rgb(var(--c-surface-dark) / <alpha-value>)',
+              },
+              ink: {
+                DEFAULT: 'rgb(var(--c-ink) / <alpha-value>)',
+                muted: 'rgb(var(--c-ink-muted) / <alpha-value>)',
+                subtle: 'rgb(var(--c-ink-subtle) / <alpha-value>)',
+              },
+              primary: {
+                DEFAULT: 'rgb(var(--c-primary) / <alpha-value>)',
+                soft: 'rgb(var(--c-primary-soft) / <alpha-value>)',
+                deep: 'rgb(var(--c-primary-deep) / <alpha-value>)',
+              },
+              danger: {
+                DEFAULT: 'rgb(var(--c-danger) / <alpha-value>)',
+                soft: 'rgb(var(--c-danger-soft) / <alpha-value>)',
+                deep: 'rgb(var(--c-danger-deep) / <alpha-value>)',
+              },
+              accent: {
+                DEFAULT: 'rgb(var(--c-accent) / <alpha-value>)',
+              },
+              // Keep legacy for safety if needed, or mapped to new ones
               felt: {
-                800: '#1e3a2f',
-                900: '#0f221b',
+                800: 'rgb(var(--c-canvas) / <alpha-value>)', // Map to canvas for fallback
+                900: 'rgb(var(--c-canvas) / <alpha-value>)',
               },
               gold: {
-                400: '#fbbf24',
-                500: '#f59e0b',
+                 400: 'rgb(var(--c-accent) / <alpha-value>)',
+                 500: '#f59e0b',
               }
             },
             animation: {
@@ -52,7 +122,7 @@
 }
 </script>
 </head>
-  <body class="bg-felt-900 text-slate-100 h-[100dvh] overflow-hidden overscroll-none selection:bg-emerald-500/30">
+  <body class="bg-canvas text-ink h-[100dvh] overflow-hidden overscroll-none selection:bg-primary/30">
     <div id="root"></div>
     <script type="module" src="./index.tsx"></script>
   </body>

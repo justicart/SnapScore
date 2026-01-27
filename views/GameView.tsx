@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Player, CardSettings, Round } from '../types';
 import { Button } from '../components/Button';
@@ -229,9 +228,9 @@ export const GameView: React.FC<GameViewProps> = ({
                 
                 {myPlayers.length > 0 && players.filter(p => !myPlayerIds.has(p.id)).length > 0 && (
                      <div className="flex items-center gap-3 py-1 opacity-50">
-                        <div className="h-px bg-slate-600 flex-1"></div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Remote players</span>
-                        <div className="h-px bg-slate-600 flex-1"></div>
+                        <div className="h-px bg-surface-highlight flex-1"></div>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">Remote players</span>
+                        <div className="h-px bg-surface-highlight flex-1"></div>
                     </div>
                 )}
                 
@@ -250,19 +249,19 @@ export const GameView: React.FC<GameViewProps> = ({
         
         {players.length === 0 && (
             <div className="text-center py-10 opacity-50">
-                <p>No players added.</p>
+                <p className="text-ink-muted">No players added.</p>
             </div>
         )}
         
         {!isEditMode && players.length > 0 && (
              <div className="text-center mt-8 flex flex-col items-center gap-2">
                  {!isClient && (
-                    <p className="text-xs text-slate-600">Tip: Press and hold a player card to reorder, rename, or delete.</p>
+                    <p className="text-xs text-ink-subtle">Tip: Press and hold a player card to reorder, rename, or delete.</p>
                  )}
                  {isMultiplayer && (
                     <button 
                         onClick={onReconnect}
-                        className="text-[10px] font-bold uppercase tracking-widest text-slate-700 hover:text-emerald-500 transition-colors py-1 px-3"
+                        className="text-[10px] font-bold uppercase tracking-widest text-ink-subtle hover:text-primary-soft transition-colors py-1 px-3"
                     >
                         Reconnect
                     </button>
@@ -274,9 +273,9 @@ export const GameView: React.FC<GameViewProps> = ({
       {/* New Game Confirmation Dialog */}
       {showNewGameConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
+            <div className="bg-surface w-full max-w-xs rounded-2xl shadow-2xl border border-surface-highlight p-6 flex flex-col justify-center">
                 <h3 className="text-xl font-bold text-white mb-2">Start new game?</h3>
-                <p className="text-slate-400 mb-6 text-sm">
+                <p className="text-ink-muted mb-6 text-sm">
                     Current scores will be cleared, but players and settings will be kept.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -297,9 +296,9 @@ export const GameView: React.FC<GameViewProps> = ({
       {/* Leave Game Confirmation Dialog */}
       {showLeaveConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
+            <div className="bg-surface w-full max-w-xs rounded-2xl shadow-2xl border border-surface-highlight p-6 flex flex-col justify-center">
                 <h3 className="text-xl font-bold text-white mb-2">Leave game?</h3>
-                <p className="text-slate-400 mb-6 text-sm">
+                <p className="text-ink-muted mb-6 text-sm">
                     You will disconnect from the session.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
@@ -320,10 +319,10 @@ export const GameView: React.FC<GameViewProps> = ({
       {/* Delete Player Confirmation Dialog */}
       {playerToDelete && (
         <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
+            <div className="bg-surface w-full max-w-xs rounded-2xl shadow-2xl border border-surface-highlight p-6 flex flex-col justify-center">
                 <h3 className="text-xl font-bold text-white mb-2">Remove player?</h3>
-                <p className="text-slate-400 mb-6 text-sm">
-                    <span className="text-emerald-400 font-bold">{players.find(p => p.id === playerToDelete)?.name}</span> will be removed from the game.
+                <p className="text-ink-muted mb-6 text-sm">
+                    <span className="text-primary-soft font-bold">{players.find(p => p.id === playerToDelete)?.name}</span> will be removed from the game.
                 </p>
                 <div className="grid grid-cols-2 gap-3">
                     <Button variant="secondary" onClick={() => setPlayerToDelete(null)}>

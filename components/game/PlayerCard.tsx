@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Player, CardSettings, Round } from '../../types';
 import { IconCamera, IconPlus, IconStar, IconTrash } from '../Icons';
@@ -71,20 +70,20 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
   if (isEditMode) {
     return (
-      <div className="bg-slate-800 rounded-xl p-3 shadow-lg border-2 border-dashed border-emerald-500/50 flex items-center justify-between">
+      <div className="bg-surface rounded-xl p-3 shadow-lg border-2 border-dashed border-primary/50 flex items-center justify-between">
         <div className="flex items-center gap-3 flex-1 mr-2">
           <div className="flex flex-col gap-1 shrink-0">
             <button 
               onClick={(e) => { e.stopPropagation(); onMove?.(index, 'up'); }}
               disabled={index === 0}
-              className="p-1 bg-slate-700 rounded disabled:opacity-30 text-emerald-400 z-10 relative hover:bg-slate-600"
+              className="p-1 bg-surface-highlight rounded disabled:opacity-30 text-primary-soft z-10 relative hover:bg-surface-highlight/80"
             >
               <svg className="w-4 h-4 rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); onMove?.(index, 'down'); }}
               disabled={index === totalPlayers - 1}
-              className="p-1 bg-slate-700 rounded disabled:opacity-30 text-emerald-400 z-10 relative hover:bg-slate-600"
+              className="p-1 bg-surface-highlight rounded disabled:opacity-30 text-primary-soft z-10 relative hover:bg-surface-highlight/80"
             >
               <svg className="w-4 h-4 -rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.75 19.5 8.25 12l7.5-7.5" /></svg>
             </button>
@@ -93,7 +92,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             type="text"
             value={player.name}
             onChange={(e) => onNameChange?.(index, e.target.value)}
-            className="bg-transparent border-b border-slate-600 focus:border-emerald-500 text-white font-bold text-lg focus:outline-none w-full min-w-0"
+            className="bg-transparent border-b border-surface-highlight focus:border-primary text-white font-bold text-lg focus:outline-none w-full min-w-0"
             placeholder="Player name"
           />
         </div>
@@ -102,7 +101,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             e.stopPropagation(); 
             onDelete?.(player.id); 
           }}
-          className="p-3 bg-red-500/10 text-red-500 rounded-lg z-10 relative hover:bg-red-500/20 cursor-pointer"
+          className="p-3 bg-danger/10 text-danger rounded-lg z-10 relative hover:bg-danger/20 cursor-pointer"
         >
           <IconTrash className="w-6 h-6 pointer-events-none" />
         </button>
@@ -127,10 +126,10 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
 
   return (
     <div 
-      className={`bg-slate-800 rounded-xl p-3 shadow-lg transition-all duration-300 relative overflow-hidden group select-none border ${
+      className={`bg-surface rounded-xl p-3 shadow-lg transition-all duration-300 relative overflow-hidden group select-none border ${
         isBehind 
-          ? 'border-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-emerald-500/20' 
-          : 'border-slate-700/50'
+          ? 'border-primary shadow-[0_0_15px_rgba(16,185,129,0.15)] ring-1 ring-primary/20' 
+          : 'border-surface-highlight/50'
       }`}
       onMouseDown={handlePressStart}
       onMouseUp={handlePressEnd}
@@ -142,10 +141,10 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       <div className="flex justify-between items-center mb-2 pointer-events-none">
         <h3 className="text-lg font-bold text-white truncate max-w-[180px] flex items-center gap-2">
           {player.name}
-          {isWinner && <IconStar className="w-5 h-5 text-gold-400 drop-shadow-md animate-pulse-slow" />}
+          {isWinner && <IconStar className="w-5 h-5 text-accent drop-shadow-md animate-pulse-slow" />}
         </h3>
         <div className="text-right">
-          <span className={`text-3xl font-black leading-none ${isWinner ? 'text-gold-400' : 'text-emerald-400'}`}>
+          <span className={`text-3xl font-black leading-none ${isWinner ? 'text-accent' : 'text-primary-soft'}`}>
             {calculatePlayerTotal(player, settings, players)}
           </span>
         </div>
@@ -154,7 +153,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
       {/* History Snippet with Placeholder Slots */}
       <div 
         ref={scrollRef}
-        className="flex gap-2 overflow-x-auto pb-2 mb-1 text-xs text-slate-400 scrollbar-hide scroll-smooth"
+        className="flex gap-2 overflow-x-auto pb-2 mb-1 text-xs text-ink-muted scrollbar-hide scroll-smooth"
       >
          {Array.from({ length: displayCount }).map((_, i) => {
              const round = player.rounds[i];
@@ -177,11 +176,11 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                  }
 
                  if (isBonus) {
-                    buttonClass += "bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20";
+                    buttonClass += "bg-primary/10 border-primary/30 text-primary-soft hover:bg-primary/20";
                  } else if (isPenalty) {
-                    buttonClass += "bg-red-500/10 border-red-500/30 text-red-400 hover:bg-red-500/20";
+                    buttonClass += "bg-danger/10 border-danger/30 text-danger-soft hover:bg-danger/20";
                  } else {
-                    buttonClass += "bg-slate-900/50 hover:bg-slate-900 hover:text-emerald-400";
+                    buttonClass += "bg-surface-dark/50 hover:bg-surface-dark hover:text-primary-soft";
                  }
 
                  return (
@@ -206,8 +205,8 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                         }}
                         className={`w-8 h-7 rounded flex items-center justify-center transition-all cursor-pointer shrink-0 border border-dashed ${
                             isTargetedSlot 
-                            ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.3)] animate-pulse-slow' 
-                            : 'border-slate-600 bg-slate-900/20 text-slate-600 hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-400'
+                            ? 'border-primary bg-primary/10 text-primary-soft shadow-[0_0_8px_rgba(16,185,129,0.3)] animate-pulse-slow' 
+                            : 'border-surface-highlight bg-surface-dark/20 text-ink-subtle hover:border-primary/40 hover:bg-primary/5 hover:text-primary-soft'
                         }`}
                         title={`Enter score for Round ${i + 1}`}
                      >
@@ -225,7 +224,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                 e.stopPropagation(); 
                 onRequestScan(player.id, undefined, targetIndex); 
               }}
-              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border-emerald-600/20"
+              className="flex-1 flex items-center justify-center gap-2 py-2 rounded-lg border transition-colors font-medium text-sm bg-primary/10 text-primary-soft hover:bg-primary/20 border-primary/20"
           >
               <IconCamera className="w-4 h-4" />
               Scan
@@ -236,7 +235,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                   e.stopPropagation();
                   onManualEntry(player.id, undefined, undefined, targetIndex);
               }}
-              className="flex-1 flex items-center justify-center gap-2 bg-slate-700 text-slate-300 hover:bg-slate-600 py-2 rounded-lg transition-colors font-medium text-sm border border-slate-700/50"
+              className="flex-1 flex items-center justify-center gap-2 bg-surface-highlight text-ink-muted hover:bg-surface-highlight/80 py-2 rounded-lg transition-colors font-medium text-sm border border-surface-highlight/50"
           >
               <IconPlus className="w-4 h-4" />
               Manual
@@ -247,7 +246,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                   e.stopPropagation();
                   onQuickZero?.(player.id, targetIndex);
               }}
-              className="w-11 flex items-center justify-center bg-slate-700 text-emerald-400 hover:bg-emerald-600 hover:text-white rounded-lg transition-colors font-black text-sm border border-slate-700/50"
+              className="w-11 flex items-center justify-center bg-surface-highlight text-primary-soft hover:bg-primary hover:text-white rounded-lg transition-colors font-black text-sm border border-surface-highlight/50"
               title="Add 0 points"
           >
               0

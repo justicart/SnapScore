@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Player, AppView, CardSettings, Round, P2PMessage } from './types';
 import { SetupView } from './views/SetupView';
@@ -152,18 +151,18 @@ const App: React.FC = () => {
 
   if (multiplayer.isJoining) {
       return (
-          <div className="h-[100dvh] bg-felt-900 flex flex-col items-center justify-center p-6 text-center">
-              <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-8"></div>
+          <div className="h-[100dvh] bg-canvas flex flex-col items-center justify-center p-6 text-center">
+              <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mb-8"></div>
               <h2 className="text-2xl font-bold text-white mb-2">Syncing stream</h2>
-              <p className="text-slate-400">Negotiating durable connection...</p>
+              <p className="text-ink-muted">Negotiating durable connection...</p>
           </div>
       );
   }
 
   return (
-    <div className="max-w-md mx-auto h-[100dvh] bg-felt-900 flex flex-col shadow-2xl relative overflow-hidden">
+    <div className="max-w-md mx-auto h-[100dvh] bg-canvas flex flex-col shadow-2xl relative overflow-hidden">
       {multiplayer.hostEndedSession && (
-          <div className="absolute top-0 left-0 right-0 bg-red-500 text-white text-center p-3 z-50 flex justify-between items-center animate-slide-down">
+          <div className="absolute top-0 left-0 right-0 bg-danger text-white text-center p-3 z-50 flex justify-between items-center animate-slide-down">
               <span className="text-sm font-bold">Host ended session.</span>
               <button onClick={() => multiplayer.setHostEndedSession(false)} className="p-1"><IconX className="w-5 h-5" /></button>
           </div>

@@ -12,14 +12,14 @@ export const Button: React.FC<ButtonProps> = ({
   className = '',
   ...props 
 }) => {
-  const baseStyles = "inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-felt-900 disabled:opacity-50 disabled:cursor-not-allowed";
+  const baseStyles = "inline-flex items-center justify-center rounded-lg px-4 py-3 text-sm font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-canvas disabled:opacity-50 disabled:cursor-not-allowed";
   
   const variants = {
-    primary: "bg-emerald-500 text-white hover:bg-emerald-600 focus:ring-emerald-500 shadow-lg shadow-emerald-900/20",
-    secondary: "bg-slate-700 text-slate-100 hover:bg-slate-600 focus:ring-slate-500 border border-slate-600",
-    danger: "bg-red-500 text-white hover:bg-red-600 focus:ring-red-500",
-    ghost: "bg-transparent text-emerald-400 hover:text-emerald-300 hover:bg-white/5",
-    soft: "bg-emerald-600/10 text-emerald-400 hover:bg-emerald-600/20 border border-emerald-600/20 shadow-none",
+    primary: "bg-primary text-white hover:bg-primary-soft focus:ring-primary shadow-lg shadow-primary-deep/20",
+    secondary: "bg-surface-highlight text-ink hover:bg-surface-highlight/80 focus:ring-surface-highlight border border-surface-highlight",
+    danger: "bg-danger text-white hover:bg-danger-soft focus:ring-danger",
+    ghost: "bg-transparent text-primary-soft hover:text-primary-soft hover:bg-white/5",
+    soft: "bg-primary/10 text-primary-soft hover:bg-primary/20 border border-primary/20 shadow-none",
   };
 
   return (

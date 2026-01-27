@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Player, CardSettings } from '../types';
 import { Button } from '../components/Button';
@@ -151,15 +150,15 @@ export const SetupView: React.FC<SetupViewProps> = ({
       <div className="flex justify-between items-center px-6 pt-6 pb-4 shrink-0">
         <div>
             <h1 className="text-3xl font-bold text-white tracking-tight">SnapScore</h1>
-            <p className="text-xs text-emerald-400 font-bold tracking-wider uppercase">
+            <p className="text-xs text-primary-soft font-bold tracking-wider uppercase">
                 {getPresetName(settings.preset)}
-                {isClient && <span className="text-slate-500 ml-2">• Joined lobby</span>}
+                {isClient && <span className="text-ink-subtle ml-2">• Joined lobby</span>}
             </p>
         </div>
         <div className="flex gap-2">
             <button 
                 onClick={onOpenSettings}
-                className="p-2 rounded-full bg-slate-800 text-slate-300 hover:bg-slate-700 transition-colors"
+                className="p-2 rounded-full bg-surface text-ink-muted hover:bg-surface-highlight transition-colors"
             >
                 <IconSettings className="w-6 h-6" />
             </button>
@@ -169,15 +168,15 @@ export const SetupView: React.FC<SetupViewProps> = ({
       <div className="flex-1 overflow-y-auto px-6 pb-4 space-y-8">
         
         {/* Existing Roster (Host & Client see this) */}
-        <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+        <div className="bg-surface/50 rounded-xl p-4 border border-surface-highlight">
             <div className="flex justify-between items-center mb-3">
-                <h3 className="text-xs text-slate-500 uppercase font-bold">Current roster ({players.length})</h3>
+                <h3 className="text-xs text-ink-subtle uppercase font-bold">Current roster ({players.length})</h3>
                 <div className="flex items-center gap-2">
-                    {isClient && players.length === 0 && <span className="animate-pulse w-2 h-2 bg-emerald-500 rounded-full"></span>}
+                    {isClient && players.length === 0 && <span className="animate-pulse w-2 h-2 bg-primary rounded-full"></span>}
                     {!isClient && (
                         <button 
                             onClick={onOpenMultiplayer}
-                            className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                            className="p-1.5 rounded-lg bg-primary/10 text-primary-soft hover:bg-primary/20 transition-colors"
                         >
                             <IconQrCode className="w-5 h-5" />
                         </button>
@@ -187,15 +186,15 @@ export const SetupView: React.FC<SetupViewProps> = ({
             
             {players.length === 0 ? (
                 <div className="text-center py-4">
-                    <p className="text-slate-500 italic text-sm">No players joined yet.</p>
-                    {isClient && <p className="text-slate-600 text-xs mt-1">Waiting for host or you to add players...</p>}
+                    <p className="text-ink-subtle italic text-sm">No players joined yet.</p>
+                    {isClient && <p className="text-ink-subtle text-xs mt-1">Waiting for host or you to add players...</p>}
                 </div>
             ) : (
                 <ul className="space-y-2">
                     {players.map(p => (
-                        <li key={p.id} className="text-white font-medium flex items-center justify-between bg-slate-900/50 p-2 rounded-lg group">
+                        <li key={p.id} className="text-white font-medium flex items-center justify-between bg-surface-dark/50 p-2 rounded-lg group">
                             <div className="flex items-center gap-3">
-                                <div className="w-8 h-8 bg-emerald-900 text-emerald-400 rounded-full flex items-center justify-center text-sm font-bold">
+                                <div className="w-8 h-8 bg-primary-deep text-primary-soft rounded-full flex items-center justify-center text-sm font-bold">
                                     {p.name.charAt(0).toUpperCase()}
                                 </div>
                                 {p.name}
@@ -203,7 +202,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
                             {onRemovePlayer && (!isClient || myPlayerIds.has(p.id)) && (
                                 <button 
                                     onClick={() => onRemovePlayer(p.id)}
-                                    className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                                    className="p-1.5 text-ink-subtle hover:text-danger-soft hover:bg-danger/10 rounded-lg transition-colors"
                                     title="Remove Player"
                                 >
                                     <IconTrash className="w-4 h-4" />
@@ -217,10 +216,10 @@ export const SetupView: React.FC<SetupViewProps> = ({
 
         {/* Add Player Form */}
         <div className="pb-2"> {/* Extra padding for focus rings */}
-            <h2 className="text-xl text-emerald-400 font-semibold mb-4">
+            <h2 className="text-xl text-primary-soft font-semibold mb-4">
                 {isClient ? "Join game" : "Add players"}
             </h2>
-            <p className="text-xs text-slate-400 mb-3">
+            <p className="text-xs text-ink-muted mb-3">
                 {isClient 
                     ? "Enter your name (and friends) to join the roster." 
                     : "Enter local players or wait for friends to join via QR code."
@@ -237,14 +236,14 @@ export const SetupView: React.FC<SetupViewProps> = ({
                     onChange={(e) => handleNameChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
                     placeholder={isClient ? "Your name" : `Player ${players.length + index + 1} name`}
-                    className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow"
+                    className="flex-1 bg-surface border border-surface-highlight rounded-lg px-4 py-3 text-white placeholder-ink-subtle focus:outline-none focus:ring-2 focus:ring-primary transition-shadow"
                     autoFocus={index === 0 && names.length === 1}
                 />
                 {names.length > 1 && (
                     <button
                     type="button"
                     onClick={() => removePlayer(index)}
-                    className="p-3 text-slate-400 hover:text-red-400 transition-colors"
+                    className="p-3 text-ink-muted hover:text-danger-soft transition-colors"
                     >
                     <IconTrash className="w-5 h-5" />
                     </button>
@@ -257,7 +256,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
                 variant="secondary" 
                 fullWidth 
                 onClick={addPlayer}
-                className="mt-4 border-dashed border-2 border-slate-600 bg-transparent hover:border-slate-500"
+                className="mt-4 border-dashed border-2 border-surface-highlight bg-transparent hover:border-ink-subtle"
             >
                 <IconPlus className="w-5 h-5 mr-2" />
                 Add another
@@ -267,10 +266,10 @@ export const SetupView: React.FC<SetupViewProps> = ({
 
         {/* Last Game Section */}
         {lastGame && (
-            <div className="pt-6 border-t border-slate-800">
-                <h3 className="text-xs text-slate-500 uppercase font-bold mb-3">Last game results</h3>
-                <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
-                    <div className="flex justify-between text-xs text-slate-500 mb-2">
+            <div className="pt-6 border-t border-surface">
+                <h3 className="text-xs text-ink-subtle uppercase font-bold mb-3">Last game results</h3>
+                <div className="bg-surface/30 rounded-xl p-4 border border-surface-highlight/50">
+                    <div className="flex justify-between text-xs text-ink-subtle mb-2">
                         <span>{new Date(lastGame.timestamp).toLocaleDateString()}</span>
                         <span>{new Date(lastGame.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
                     </div>
@@ -285,12 +284,12 @@ export const SetupView: React.FC<SetupViewProps> = ({
                             .map((p, i) => (
                             <li key={p.id} className="flex justify-between items-center">
                                 <div className="flex items-center gap-2">
-                                    <span className={`text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full ${i === 0 ? 'bg-gold-500/20 text-gold-400' : 'bg-slate-700 text-slate-400'}`}>
+                                    <span className={`text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full ${i === 0 ? 'bg-accent/20 text-accent' : 'bg-surface-highlight text-ink-muted'}`}>
                                         {i + 1}
                                     </span>
-                                    <span className="text-slate-300 text-sm">{p.name}</span>
+                                    <span className="text-ink-muted text-sm">{p.name}</span>
                                 </div>
-                                <span className={`font-mono font-bold ${i === 0 ? 'text-gold-400' : 'text-slate-400'}`}>
+                                <span className={`font-mono font-bold ${i === 0 ? 'text-accent' : 'text-ink-muted'}`}>
                                     {p.score}
                                 </span>
                             </li>
@@ -301,9 +300,9 @@ export const SetupView: React.FC<SetupViewProps> = ({
         )}
       </div>
 
-      <div className="p-6 border-t border-slate-800 bg-felt-900 shrink-0 z-10">
+      <div className="p-6 border-t border-surface bg-canvas shrink-0 z-10">
         {isClient && joined && (
-            <div className="mb-4 p-3 bg-emerald-500/20 border border-emerald-500/30 rounded-lg flex items-center gap-2 text-emerald-400 text-sm">
+            <div className="mb-4 p-3 bg-primary/20 border border-primary/30 rounded-lg flex items-center gap-2 text-primary-soft text-sm">
                 <IconCheck className="w-5 h-5" />
                 <span>Joined successfully! Waiting for host...</span>
             </div>
@@ -333,7 +332,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
         </div>
         
         {isClient && players.length > 0 && !hasInput && (
-            <p className="text-center text-xs text-slate-500 mt-4 animate-pulse">
+            <p className="text-center text-xs text-ink-subtle mt-4 animate-pulse">
                 Host will start the game soon...
             </p>
         )}
@@ -342,9 +341,9 @@ export const SetupView: React.FC<SetupViewProps> = ({
       {/* Clear Session Confirmation Dialog */}
       {showClearConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
+            <div className="bg-surface w-full max-w-xs rounded-2xl shadow-2xl border border-surface-highlight p-6 flex flex-col justify-center">
                 <h3 className="text-xl font-bold text-white mb-2">{isClient ? 'Leave lobby?' : 'Clear session?'}</h3>
-                <p className="text-slate-400 mb-6 text-sm">
+                <p className="text-ink-muted mb-6 text-sm">
                     {isClient 
                         ? "You will disconnect from the host and return to the main setup."
                         : "This will disconnect all players, delete the current roster, and create a new session."
