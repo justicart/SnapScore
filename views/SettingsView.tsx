@@ -48,14 +48,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
         <button onClick={onCancel} className="p-2 -ml-2 text-slate-400 hover:text-white">
           <IconChevronLeft className="w-6 h-6" />
         </button>
-        <h2 className="text-lg font-bold ml-2">Game Rules</h2>
+        <h2 className="text-lg font-bold ml-2">Game rules</h2>
       </div>
 
       <div className="p-6 space-y-10 overflow-y-auto flex-1">
         
         {/* Preset Selector */}
         <div className="space-y-3">
-            <label className="block text-sm font-medium text-emerald-400 uppercase tracking-widest">Game Preset</label>
+            <label className="block text-sm font-medium text-emerald-400 uppercase tracking-widest">Game preset</label>
              <button
                 onClick={() => setIsPresetSheetOpen(true)}
                 className="w-full flex items-center justify-between bg-slate-800 border border-slate-700 rounded-xl p-4 text-left hover:border-emerald-500 transition-colors group"
@@ -77,7 +77,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
             <div className="space-y-6 animate-in fade-in duration-500">
                 {/* Winning Condition */}
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium text-emerald-400 uppercase tracking-wider">Winning Condition</label>
+                    <label className="block text-sm font-medium text-emerald-400 uppercase tracking-wider">Winning condition</label>
                     <div className="flex gap-2 p-1 bg-slate-800 rounded-lg">
                         <button
                         type="button"
@@ -88,7 +88,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
                             : 'text-slate-400 hover:text-slate-200'
                         }`}
                         >
-                        Lowest Score
+                        Lowest score
                         </button>
                         <button
                         type="button"
@@ -99,14 +99,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
                             : 'text-slate-400 hover:text-slate-200'
                         }`}
                         >
-                        Highest Score
+                        Highest score
                         </button>
                     </div>
                 </div>
 
                 {/* Number Cards */}
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium text-emerald-400 uppercase tracking-wider">Number Cards (2-10)</label>
+                    <label className="block text-sm font-medium text-emerald-400 uppercase tracking-wider">Number cards (2-10)</label>
                     <div className="flex gap-2 p-1 bg-slate-800 rounded-lg">
                         <button
                         type="button"
@@ -117,7 +117,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
                             : 'text-slate-400 hover:text-slate-200'
                         }`}
                         >
-                        Face Value
+                        Face value
                         </button>
                         <button
                         type="button"
@@ -128,7 +128,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
                             : 'text-slate-400 hover:text-slate-200'
                         }`}
                         >
-                        Fixed Value
+                        Fixed value
                         </button>
                     </div>
                     {formData.numberCardBehavior === 'fixed' && (
@@ -145,7 +145,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
 
                 {/* Face Cards */}
                 <div className="space-y-2">
-                    <label className="block text-sm font-medium text-emerald-400 uppercase tracking-wider">Face Cards (K, Q, J)</label>
+                    <label className="block text-sm font-medium text-emerald-400 uppercase tracking-wider">Face cards (K, Q, J)</label>
                     <div className="flex gap-2 p-1 bg-slate-800 rounded-lg">
                         <button
                         type="button"
@@ -156,7 +156,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
                             : 'text-slate-400 hover:text-slate-200'
                         }`}
                         >
-                        Face Value
+                        Face value
                         </button>
                         <button
                         type="button"
@@ -167,7 +167,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
                             : 'text-slate-400 hover:text-slate-200'
                         }`}
                         >
-                        Fixed Value
+                        Fixed value
                         </button>
                     </div>
                     {formData.faceCardBehavior === 'fixed' && (
@@ -215,7 +215,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
             <div className="bg-emerald-500/5 border border-emerald-500/20 p-4 rounded-xl animate-in fade-in slide-in-from-bottom-2 duration-300">
                 <div className="flex items-center gap-2 text-emerald-400 mb-2">
                     <IconStar className="w-5 h-5" />
-                    <span className="font-bold uppercase tracking-widest text-sm">Preset Active</span>
+                    <span className="font-bold uppercase tracking-widest text-sm">Preset active</span>
                 </div>
                 <p className="text-slate-400 text-sm leading-snug">
                     Preset rules for <span className="text-white font-bold">{formData.preset === 'flip7' ? 'Flip 7' : 'Gnoming Around'}</span> are automatically applied. Manual scoring overrides are disabled to ensure mathematical accuracy.
@@ -228,7 +228,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
         {isClient && onLeave && (
             <div className="pt-2">
                  <Button variant="danger" fullWidth onClick={onLeave}>
-                     Disconnect & Leave Game
+                     Disconnect & leave game
                  </Button>
             </div>
         )}
@@ -237,7 +237,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
 
       <div className="p-4 border-t border-slate-800 bg-felt-900">
         <Button fullWidth onClick={() => onSave(formData)}>
-          {isClient ? "Close" : "Apply Rules"}
+          {isClient ? "Close" : "Apply rules"}
         </Button>
       </div>
 
@@ -249,7 +249,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ settings, onSave, on
                 onClick={e => e.stopPropagation()}
             >
                 <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-xl font-bold text-white">Select Preset</h3>
+                    <h3 className="text-xl font-bold text-white">Select preset</h3>
                     <button onClick={() => setIsPresetSheetOpen(false)} className="p-2 -mr-2 text-slate-400 hover:text-white rounded-full">
                         <IconX className="w-6 h-6" />
                     </button>

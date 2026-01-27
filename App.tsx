@@ -154,7 +154,7 @@ const App: React.FC = () => {
       return (
           <div className="h-[100dvh] bg-felt-900 flex flex-col items-center justify-center p-6 text-center">
               <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-8"></div>
-              <h2 className="text-2xl font-bold text-white mb-2">Syncing Stream</h2>
+              <h2 className="text-2xl font-bold text-white mb-2">Syncing stream</h2>
               <p className="text-slate-400">Negotiating durable connection...</p>
           </div>
       );

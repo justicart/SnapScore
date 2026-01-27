@@ -216,7 +216,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
                  <button onClick={onCancel} className="p-2 rounded-full bg-black/20 text-white backdrop-blur-md hover:bg-black/40 transition-colors">
                    <IconX className="w-6 h-6" />
                  </button>
-                 <span className="text-white font-semibold text-sm shadow-sm drop-shadow-md">Scan {player.name}'s Hand</span>
+                 <span className="text-white font-semibold text-sm shadow-sm drop-shadow-md">Scan {player.name}'s hand</span>
                  <div className="w-10"></div>
                </div>
                <div className="flex items-center justify-between pointer-events-auto pb-8">
@@ -233,8 +233,8 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-6 bg-felt-900">
             <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-6"><IconCamera className="w-10 h-10 text-slate-500" /></div>
-            <h3 className="text-xl font-bold text-white mb-2">Camera Unavailable</h3>
-            <Button fullWidth onClick={() => fileInputRef.current?.click()} className="mb-4">Select Photo</Button>
+            <h3 className="text-xl font-bold text-white mb-2">Camera unavailable</h3>
+            <Button fullWidth onClick={() => fileInputRef.current?.click()} className="mb-4">Select photo</Button>
             <Button variant="secondary" fullWidth onClick={onCancel}>Cancel</Button>
           </div>
         )}
@@ -261,14 +261,14 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
           <div className="flex-1 flex flex-col items-center justify-center text-center">
             <div className="bg-red-500/10 p-4 rounded-full mb-4"><IconX className="w-8 h-8 text-red-500" /></div>
             <p className="text-slate-300 mb-6 max-w-xs">{error}</p>
-            <Button onClick={handleRetake} fullWidth>Try Again</Button>
+            <Button onClick={handleRetake} fullWidth>Try again</Button>
           </div>
         ) : (
           <>
              <div className="flex justify-between items-end mb-4 shrink-0">
                 <div>
                     <h3 className="text-sm text-slate-400 font-semibold uppercase tracking-wider">
-                      {targetIndex !== undefined ? `Round ${targetIndex + 1} Score` : 'Score'}
+                      {targetIndex !== undefined ? `Round ${targetIndex + 1} score` : 'Score'}
                     </h3>
                     <div className="flex items-center gap-2">
                         <span className="text-5xl font-black text-emerald-400">{calculatedTotal}</span>
@@ -280,7 +280,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
                 <div className="text-right pb-2">
                     <span className="text-xs text-slate-500 block uppercase tracking-wider mb-1">Found</span>
                     <span className="text-white text-lg font-bold bg-slate-800 px-3 py-1 rounded-lg border border-slate-700">
-                        {fullCards.length} Cards
+                        {fullCards.length} cards
                     </span>
                 </div>
              </div>
@@ -295,7 +295,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
                    <div className="space-y-4">
                       {gnomingBreakdown.sets.length > 0 && (
                         <div className="space-y-1">
-                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Matching Sets</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Matching sets</p>
                           {gnomingBreakdown.sets.map((s, i) => (
                             <div key={i} className="flex justify-between items-center text-blue-400 font-bold border-b border-slate-700/30 pb-1">
                                 <span>{s.label}</span>
@@ -305,7 +305,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
                         </div>
                       )}
                       <div className="space-y-1">
-                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Individual Cards</p>
+                          <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Individual cards</p>
                           {gnomingBreakdown.loneCards.map((c, i) => (
                              <div key={i} className="flex justify-between items-center text-slate-200 border-b border-slate-700/30 pb-1">
                                 <span className={c.isHazard ? 'text-red-400 font-bold' : c.rank === 'Star' ? 'text-gold-400' : ''}>{c.rank === 'Star' ? 'Star (Unused)' : c.rank === 'X' ? 'X (Hazard)' : c.rank}</span>
@@ -374,7 +374,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
                 {!isGnoming && (
                   <div className="pt-3 mt-2">
                       <Button variant="ghost" fullWidth onClick={handleAddCard} className="border-2 border-dashed border-slate-700 hover:border-slate-600 py-2 text-sm">
-                          <IconPlus className="w-4 h-4 mr-2" /> Add Card
+                          <IconPlus className="w-4 h-4 mr-2" /> Add card
                       </Button>
                   </div>
                 )}
@@ -397,7 +397,7 @@ export const ScanView: React.FC<ScanViewProps> = ({ player, players = [], settin
 
              <div className="space-y-3 shrink-0">
                 <Button onClick={handleSave} fullWidth>
-                    {existingRoundId ? 'Update Score' : 'Save Score'}
+                    {existingRoundId ? 'Update score' : 'Save score'}
                 </Button>
                 <Button variant="secondary" onClick={onCancel} fullWidth>
                     Cancel

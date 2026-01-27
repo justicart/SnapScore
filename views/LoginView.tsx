@@ -42,7 +42,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onLogin, isLoggingIn }) =>
                     rel="noreferrer" 
                     className="underline hover:text-emerald-500 transition-colors"
                 >
-                    Billing & Quota Information
+                    Billing & quota information
                 </a>
             </p>
         </div>

@@ -43,7 +43,7 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
     >
       <div>
         {isEditMode ? (
-          <h1 className="text-xl font-bold text-white animate-pulse">Editing Roster</h1>
+          <h1 className="text-xl font-bold text-white animate-pulse">Editing roster</h1>
         ) : (
           <>
             <h1 className="text-xl font-bold text-white flex items-center gap-2">
@@ -76,14 +76,14 @@ export const GameHeader: React.FC<GameHeaderProps> = ({
                 onClick={() => setShowLeaveConfirm(true)} 
                 className="text-xs font-bold text-slate-400 hover:text-white px-2 py-1 bg-slate-800 rounded mr-1 border border-slate-700"
               >
-                Leave Game
+                Leave game
               </button>
             ) : (
               <button 
                 onClick={() => setShowNewGameConfirm(true)} 
                 className="text-xs font-bold text-emerald-400 hover:text-white px-2 py-1 bg-emerald-500/10 rounded mr-1 border border-emerald-500/20 hover:bg-emerald-500/20"
               >
-                New Game
+                New game
               </button>
             )}
             

@@ -111,14 +111,14 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
             <div className="bg-slate-800/50 rounded-full w-24 h-24 flex items-center justify-center mb-6">
               <IconPlus className="w-10 h-10 text-slate-500" />
             </div>
-            <p className="text-slate-400 mb-2">Manual Entry</p>
+            <p className="text-slate-400 mb-2">Manual entry</p>
             <p className="text-6xl font-bold text-emerald-400">{round.score}</p>
           </div>
         ) : (
           <div className="space-y-6 pb-6">
             {isGnoming && round.cards.length === 9 ? (
                 <div className="space-y-4">
-                    <h4 className="text-xs text-slate-500 uppercase font-bold text-center tracking-widest">3x3 Grid Layout</h4>
+                    <h4 className="text-xs text-slate-500 uppercase font-bold text-center tracking-widest">3x3 grid layout</h4>
                     <div className="grid grid-cols-3 gap-2 aspect-square max-w-[280px] mx-auto p-2 bg-slate-800/20 rounded-2xl border border-slate-700/30 shadow-inner">
                         {round.cards.map((card) => (
                             <button
@@ -162,7 +162,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
                               {gnomingBreakdown.loneCards.map((c, i) => (
                                  <div key={i} className="flex justify-between items-center text-slate-300 px-2 py-0.5 border-b border-slate-700/30 last:border-0">
                                     <span className={`text-sm ${c.isHazard ? 'text-red-400 font-bold' : c.rank === 'Star' ? 'text-gold-400' : ''}`}>
-                                        {c.rank === 'Star' ? 'Unused Star' : c.isHazard ? 'Hazard (X)' : c.rank}
+                                        {c.rank === 'Star' ? 'Unused star' : c.isHazard ? 'Hazard (X)' : c.rank}
                                     </span>
                                     <span className={`font-mono ${c.value > 0 ? 'text-emerald-400' : c.value < 0 ? 'text-blue-400' : 'text-slate-500'}`}>
                                         {c.value >= 0 ? `+${c.value}` : c.value}
@@ -187,7 +187,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
                     {editingCardId && (
                         <div className="bg-slate-800 p-4 rounded-xl border border-slate-600 animate-in fade-in slide-in-from-top-2 duration-200 shadow-2xl">
                              <div className="flex justify-between items-center mb-3">
-                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Update Card</span>
+                                <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">Update card</span>
                                 <button onClick={() => setEditingCardId(null)} className="p-1 text-slate-400 hover:text-white"><IconX className="w-4 h-4"/></button>
                              </div>
                              <div className="flex gap-2">
@@ -255,14 +255,14 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
 
             {!isGnoming && (
                 <div className="pt-3">
-                    <Button variant="ghost" fullWidth onClick={addCard} className="border-2 border-dashed border-slate-700 py-2"><IconPlus className="w-4 h-4 mr-2" /> Add Card</Button>
+                    <Button variant="ghost" fullWidth onClick={addCard} className="border-2 border-dashed border-slate-700 py-2"><IconPlus className="w-4 h-4 mr-2" /> Add card</Button>
                 </div>
             )}
 
             {isGnoming && (
                 <div className="bg-slate-800/30 p-4 rounded-xl space-y-4 border border-slate-700/50 mt-4 shadow-inner">
                     <div className="flex justify-between items-center border-b border-slate-700/50 pb-2">
-                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Game Modifiers</h4>
+                        <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">Game modifiers</h4>
                         <IconStar className="w-4 h-4 text-emerald-500/50" />
                     </div>
                     <button 
@@ -282,7 +282,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
 
             {round.calculationDurationMs !== undefined && (
               <div className="flex flex-col items-center justify-center pt-4 opacity-40 hover:opacity-100 transition-opacity">
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-1">Vision Analysis</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500 mb-1">Vision analysis</p>
                 <p className="text-xs text-slate-400 font-mono">
                   {(round.calculationDurationMs / 1000).toFixed(2)} seconds to calculate
                 </p>
@@ -294,7 +294,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
 
       <div className="p-4 border-t border-slate-800 bg-slate-900/30 shrink-0 space-y-4">
         <div className="flex justify-between items-center px-2">
-          <span className="text-slate-400 font-semibold uppercase text-xs tracking-widest">Total Round Score</span>
+          <span className="text-slate-400 font-semibold uppercase text-xs tracking-widest">Total round score</span>
           <span className="text-4xl font-black text-white">{calculateRoundScore(round, settings, players, displayIndex)}</span>
         </div>
         <div className="flex gap-3">
@@ -309,7 +309,7 @@ export const RoundDetailsModal: React.FC<RoundDetailsModalProps> = ({
       {showDeleteConfirm && (
         <div className="absolute inset-0 z-20 bg-black/80 backdrop-blur-sm flex items-center justify-center p-6">
             <div className="bg-slate-800 w-full max-w-xs rounded-2xl p-6 border border-slate-700 shadow-2xl">
-                <h4 className="text-xl font-bold text-white mb-2">Delete Score?</h4>
+                <h4 className="text-xl font-bold text-white mb-2">Delete score?</h4>
                 <p className="text-sm text-slate-400 mb-6">This round will be permanently removed.</p>
                 <div className="grid grid-cols-2 gap-3">
                     <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>

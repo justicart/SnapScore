@@ -43,7 +43,7 @@ export const ManualEntryModal: React.FC<ManualEntryModalProps> = ({
     >
       {/* Header */}
       <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50 shrink-0">
-        <h3 className="text-lg font-bold text-white">{isEdit ? 'Edit Score' : 'Add Score'}</h3>
+        <h3 className="text-lg font-bold text-white">{isEdit ? 'Edit score' : 'Add score'}</h3>
         <button onClick={onClose} className="text-slate-400 hover:text-white p-2 -mr-2 rounded-full">
           <IconX className="w-6 h-6" />
         </button>

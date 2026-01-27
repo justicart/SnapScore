@@ -138,7 +138,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
   const getPresetName = (p: string) => {
     if (p === 'flip7') return 'Flip 7';
     if (p === 'gnoming_around') return 'Gnoming Around';
-    return 'Standard Rules';
+    return 'Standard rules';
   };
 
   // Determine if submit button should be disabled
@@ -153,7 +153,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
             <h1 className="text-3xl font-bold text-white tracking-tight">SnapScore</h1>
             <p className="text-xs text-emerald-400 font-bold tracking-wider uppercase">
                 {getPresetName(settings.preset)}
-                {isClient && <span className="text-slate-500 ml-2">• Joined Lobby</span>}
+                {isClient && <span className="text-slate-500 ml-2">• Joined lobby</span>}
             </p>
         </div>
         <div className="flex gap-2">
@@ -171,7 +171,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
         {/* Existing Roster (Host & Client see this) */}
         <div className="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
             <div className="flex justify-between items-center mb-3">
-                <h3 className="text-xs text-slate-500 uppercase font-bold">Current Roster ({players.length})</h3>
+                <h3 className="text-xs text-slate-500 uppercase font-bold">Current roster ({players.length})</h3>
                 <div className="flex items-center gap-2">
                     {isClient && players.length === 0 && <span className="animate-pulse w-2 h-2 bg-emerald-500 rounded-full"></span>}
                     {!isClient && (
@@ -218,7 +218,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
         {/* Add Player Form */}
         <div className="pb-2"> {/* Extra padding for focus rings */}
             <h2 className="text-xl text-emerald-400 font-semibold mb-4">
-                {isClient ? "Join Game" : "Add Players"}
+                {isClient ? "Join game" : "Add players"}
             </h2>
             <p className="text-xs text-slate-400 mb-3">
                 {isClient 
@@ -236,7 +236,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
                     value={name}
                     onChange={(e) => handleNameChange(index, e.target.value)}
                     onKeyDown={(e) => handleKeyDown(e, index)}
-                    placeholder={isClient ? "Your Name" : `Player ${players.length + index + 1} Name`}
+                    placeholder={isClient ? "Your name" : `Player ${players.length + index + 1} name`}
                     className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-shadow"
                     autoFocus={index === 0 && names.length === 1}
                 />
@@ -260,7 +260,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
                 className="mt-4 border-dashed border-2 border-slate-600 bg-transparent hover:border-slate-500"
             >
                 <IconPlus className="w-5 h-5 mr-2" />
-                Add Another
+                Add another
             </Button>
             </form>
         </div>
@@ -268,7 +268,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
         {/* Last Game Section */}
         {lastGame && (
             <div className="pt-6 border-t border-slate-800">
-                <h3 className="text-xs text-slate-500 uppercase font-bold mb-3">Last Game Results</h3>
+                <h3 className="text-xs text-slate-500 uppercase font-bold mb-3">Last game results</h3>
                 <div className="bg-slate-800/30 rounded-xl p-4 border border-slate-700/50">
                     <div className="flex justify-between text-xs text-slate-500 mb-2">
                         <span>{new Date(lastGame.timestamp).toLocaleDateString()}</span>
@@ -328,7 +328,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
             disabled={!canSubmit}
             variant={isClient ? "secondary" : "primary"}
             >
-            {isClient ? "Join Roster" : "Start Game"}
+            {isClient ? "Join roster" : "Start game"}
             </Button>
         </div>
         
@@ -343,7 +343,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
       {showClearConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
-                <h3 className="text-xl font-bold text-white mb-2">{isClient ? 'Leave Lobby?' : 'Clear Session?'}</h3>
+                <h3 className="text-xl font-bold text-white mb-2">{isClient ? 'Leave lobby?' : 'Clear session?'}</h3>
                 <p className="text-slate-400 mb-6 text-sm">
                     {isClient 
                         ? "You will disconnect from the host and return to the main setup."
@@ -361,7 +361,7 @@ export const SetupView: React.FC<SetupViewProps> = ({
                             setShowClearConfirm(false);
                         }}
                     >
-                        {isClient ? 'Leave' : 'Clear All'}
+                        {isClient ? 'Leave' : 'Clear all'}
                     </Button>
                 </div>
             </div>

@@ -94,7 +94,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
             value={player.name}
             onChange={(e) => onNameChange?.(index, e.target.value)}
             className="bg-transparent border-b border-slate-600 focus:border-emerald-500 text-white font-bold text-lg focus:outline-none w-full min-w-0"
-            placeholder="Player Name"
+            placeholder="Player name"
           />
         </div>
         <button 
@@ -209,7 +209,7 @@ export const PlayerCard: React.FC<PlayerCardProps> = ({
                             ? 'border-emerald-500 bg-emerald-500/10 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.3)] animate-pulse-slow' 
                             : 'border-slate-600 bg-slate-900/20 text-slate-600 hover:border-emerald-500/40 hover:bg-emerald-500/5 hover:text-emerald-400'
                         }`}
-                        title={`Enter Score for Round ${i + 1}`}
+                        title={`Enter score for Round ${i + 1}`}
                      >
                         <IconPlus className={`w-3 h-3 ${isTargetedSlot ? 'scale-110' : ''}`} />
                      </button>

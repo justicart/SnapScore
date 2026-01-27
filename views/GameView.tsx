@@ -230,7 +230,7 @@ export const GameView: React.FC<GameViewProps> = ({
                 {myPlayers.length > 0 && players.filter(p => !myPlayerIds.has(p.id)).length > 0 && (
                      <div className="flex items-center gap-3 py-1 opacity-50">
                         <div className="h-px bg-slate-600 flex-1"></div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Remote Players</span>
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Remote players</span>
                         <div className="h-px bg-slate-600 flex-1"></div>
                     </div>
                 )}
@@ -275,7 +275,7 @@ export const GameView: React.FC<GameViewProps> = ({
       {showNewGameConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
-                <h3 className="text-xl font-bold text-white mb-2">Start New Game?</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Start new game?</h3>
                 <p className="text-slate-400 mb-6 text-sm">
                     Current scores will be cleared, but players and settings will be kept.
                 </p>
@@ -287,7 +287,7 @@ export const GameView: React.FC<GameViewProps> = ({
                         onNewGame();
                         setShowNewGameConfirm(false);
                     }}>
-                        New Game
+                        New game
                     </Button>
                 </div>
             </div>
@@ -298,7 +298,7 @@ export const GameView: React.FC<GameViewProps> = ({
       {showLeaveConfirm && (
         <div className="fixed inset-0 z-[70] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
-                <h3 className="text-xl font-bold text-white mb-2">Leave Game?</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Leave game?</h3>
                 <p className="text-slate-400 mb-6 text-sm">
                     You will disconnect from the session.
                 </p>
@@ -321,7 +321,7 @@ export const GameView: React.FC<GameViewProps> = ({
       {playerToDelete && (
         <div className="fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
             <div className="bg-slate-800 w-full max-w-xs rounded-2xl shadow-2xl border border-slate-700 p-6 flex flex-col justify-center">
-                <h3 className="text-xl font-bold text-white mb-2">Remove Player?</h3>
+                <h3 className="text-xl font-bold text-white mb-2">Remove player?</h3>
                 <p className="text-slate-400 mb-6 text-sm">
                     <span className="text-emerald-400 font-bold">{players.find(p => p.id === playerToDelete)?.name}</span> will be removed from the game.
                 </p>

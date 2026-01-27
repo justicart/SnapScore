@@ -171,7 +171,7 @@ export const getGnomingBreakdown = (
         }
         const modifier = isLowest ? -5 : 5;
         finalTotal += modifier;
-        breakdown.modifiers.push({ label: isLowest ? 'Out First (Lowest Score)' : 'Out First (Not Lowest)', value: modifier });
+        breakdown.modifiers.push({ label: isLowest ? 'Out first (lowest score)' : 'Out first (not lowest)', value: modifier });
     }
 
     breakdown.total = finalTotal;

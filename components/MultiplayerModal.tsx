@@ -1,5 +1,4 @@
 
-
 import React, { useEffect, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import jsQR from 'jsqr';
@@ -153,7 +152,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                 mode === 'HOST' ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              Host Game
+              Host game
             </button>
             <button 
               onClick={() => setMode('JOIN')}
@@ -172,7 +171,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
             <div className="text-center space-y-6 w-full mt-4">
                 {qrDataUrl ? (
                 <div className="bg-white p-4 rounded-xl inline-block shadow-xl">
-                    <img src={qrDataUrl} alt="Host QR Code" className="w-56 h-56" />
+                    <img src={qrDataUrl} alt="Host QR code" className="w-56 h-56" />
                 </div>
                 ) : (
                 <div className="w-56 h-56 flex items-center justify-center mx-auto">
@@ -226,7 +225,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                         className="flex items-center justify-center gap-2 w-full bg-slate-700 hover:bg-slate-600 text-white py-4 rounded-xl transition-all font-semibold"
                     >
                         {copySuccess ? <IconCheck className="w-5 h-5 text-emerald-400" /> : <IconLink className="w-5 h-5" />}
-                        {copySuccess ? 'Link Copied!' : 'Copy Invite Link'}
+                        {copySuccess ? 'Link copied!' : 'Copy invite link'}
                     </button>
                     <p className="text-xs text-slate-600 font-mono mt-3 select-all">ID: {hostId}</p>
                 </div>
@@ -238,7 +237,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                 {joinError ? (
                     <div className="text-red-400 text-center bg-red-500/10 p-6 rounded-xl">
                         <p className="mb-4 font-semibold">{joinError}</p>
-                        <Button onClick={() => setMode('JOIN')}>Retry Camera</Button>
+                        <Button onClick={() => setMode('JOIN')}>Retry camera</Button>
                     </div>
                 ) : (
                     <>
@@ -260,7 +259,7 @@ export const MultiplayerModal: React.FC<MultiplayerModalProps> = ({
                         </div>
                         </div>
                         <p className="mt-8 text-slate-400 text-sm text-center animate-pulse bg-slate-900/50 px-4 py-2 rounded-full">
-                            Point camera at Host QR Code
+                            Point camera at host QR code
                         </p>
                     </>
                 )}
